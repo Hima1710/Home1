@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>نظام إدارة الحسابات المالية</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: "Tajawal", sans-serif;
+      background-color: #f8fafc;
+    }
+    #loader {
+      position: fixed; 
+      inset: 0;
+      background: rgba(255, 255, 255, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.5rem;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .page {
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .nav-btn {
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .nav-btn.active {
+      font-weight: bold;
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+    .nav-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 25%;
+      width: 50%;
+      height: 3px;
+      background-color: white;
+    }
+    .table-container {
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    table {
+      min-width: 100%;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background-color: #e2e8f0 !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+
+  <div id="loader">
+    <div class="spinner"></div>
+    <div>جاري تحميل النظام...</div>
+  </div>
+
+  <nav class="bg-blue-600 text-white p-4 shadow-lg">
+    <div class="container mx-auto flex justify-center md:justify-around flex-wrap gap-2">
+      <button onclick="showPage('الدخل')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-700">الدخل</button>
+      <button onclick="showPage('المصروفات')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-700 active">المصروفات</button>
+      <button onclick="showPage('العمال')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-700">العمال</button>
+      <button onclick="showPage('الملخص')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-700">الملخص</button>
+    </div>
+  </nav>
+
+  <main class="container mx-auto p-4 md:p-6">
+    <!-- صفحة الدخل -->
+    <section id="الدخل" class="page hidden bg-white rounded-lg shadow-md p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">سجل الدخل</h2>
+        <button onclick="exportToExcel('الدخل')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          تصدير إلى Excel
+        </button>
+      </div>
+      
+      <form onsubmit="submitForm(event, 'الدخل')" class="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-gray-700 mb-2">التاريخ</label>
+          <input type="date" name="التاريخ" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div>
+          <label class="block text-gray-700 mb-2">المصدر</label>
+          <input type="text" name="المصدر" placeholder="مصدر الدخل" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div>
+          <label class="block text-gray-700 mb-2">المبلغ</label>
+          <input type="number" name="المبلغ" placeholder="المبلغ بالجنيه" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div>
+          <label class="block text-gray-700 mb-2">طريقة الدفع</label>
+          <select name="طريقة الدفع" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+            <option value="نقدي">نقدي</option>
+            <option value="تحويل بنكي">تحويل بنكي</option>
+            <option value="فيزا">فيزا</option>
+            <option value="شيك">شيك</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full">
+            إضافة
+          </button>
+        </div>
+        <div class="md:col-span-3">
+          <label class="block text-gray-700 mb-2">ملاحظات</label>
+          <input type="text" name="ملاحظات" placeholder="أي ملاحظات إضافية" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500">
+        </div>
+      </form>
+      
+      <div class="table-container rounded-lg border border-gray-200">
+        <table class="w-full">
+          <thead class="bg-gray-100">
+            <tr id="headers-الدخل"></tr>
+          </thead>
+          <tbody id="body-الدخل" class="divide-y divide-gray-200"></tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- صفحة المصروفات -->
+    <section id="المصروفات" class="page hidden bg-white rounded-lg shadow-md p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">سجل المصروفات</h2>
+        <button onclick="exportToExcel('المصروفات')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          تصدير إلى Excel
+        </button>
+      </div>
+      
+      <form onsubmit="submitForm(event, 'المصروفات')" class="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-gray-700 mb-2">التاريخ</label>
+          <input type="date" name="التاريخ" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div>
+          <label class="block text-gray-700 mb-2">البند</label>
+          <input type="text" name="البند" placeholder="بند المصروف" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div>
+          <label class="block text-gray-700 mb-2">المبلغ</label>
+          <input type="number" name="المبلغ" placeholder="المبلغ بالجنيه" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div class="flex items-end">
+          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full">
+            إضافة
+          </button>
+        </div>
+        <div class="md:col-span-3">
+          <label class="block text-gray-700 mb-2">ملاحظات</label>
+          <input type="text" name="ملاحظات" placeholder="أي ملاحظات إضافية" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500">
+        </div>
+      </form>
+      
+      <div class="table-container rounded-lg border border-gray-200">
+        <table class="w-full">
+          <thead class="bg-gray-100">
+            <tr id="headers-المصروفات"></tr>
+          </thead>
+          <tbody id="body-المصروفات" class="divide-y divide-gray-200"></tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- صفحة العمال -->
+    <section id="العمال" class="page hidden bg-white rounded-lg shadow-md p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-800">سجل العمال</h2>
+        <button onclick="exportToExcel('العمال')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          تصدير إلى Excel
+        </button>
+      </div>
+      
+      <form onsubmit="submitForm(event, 'العمال')" class="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-gray-700 mb-2">التاريخ</label>
+          <input type="date" name="التاريخ" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div>
+          <label class="block text-gray-700 mb-2">اسم العامل</label>
+          <input type="text" name="اسم العامل" placeholder="اسم العامل" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div>
+          <label class="block text-gray-700 mb-2">نوع الخدمة</label>
+          <input type="text" name="نوع الخدمة" placeholder="نوع الخدمة المقدمة" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div>
+          <label class="block text-gray-700 mb-2">المبلغ المدفوع</label>
+          <input type="number" name="المبلغ المدفوع" placeholder="المبلغ بالجنيه" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500" required>
+        </div>
+        <div class="md:col-span-3">
+          <label class="block text-gray-700 mb-2">ملاحظات</label>
+          <input type="text" name="ملاحظات" placeholder="أي ملاحظات إضافية" class="p-2 border rounded w-full focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex items-end">
+          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full">
+            إضافة
+          </button>
+        </div>
+      </form>
+      
+      <div class="table-container rounded-lg border border-gray-200">
+        <table class="w-full">
+          <thead class="bg-gray-100">
+            <tr id="headers-العمال"></tr>
+          </thead>
+          <tbody id="body-العمال" class="divide-y divide-gray-200"></tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- صفحة الملخص -->
+    <section id="الملخص" class="page hidden bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-2xl font-bold text-gray-800 mb-6">ملخص الحسابات</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+          <h3 class="text-lg font-semibold text-blue-800 mb-2">إجمالي الدخل</h3>
+          <p id="total-income" class="text-2xl font-bold text-blue-600">0 ج.م</p>
+        </div>
+        <div class="bg-red-50 p-4 rounded-lg border border-red-100">
+          <h3 class="text-lg font-semibold text-red-800 mb-2">إجمالي المصروفات</h3>
+          <p id="total-expenses" class="text-2xl font-bold text-red-600">0 ج.م</p>
+        </div>
+        <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+          <h3 class="text-lg font-semibold text-green-800 mb-2">صافي الربح</h3>
+          <p id="net-profit" class="text-2xl font-bold text-green-600">0 ج.م</p>
+        </div>
+      </div>
+      
+      <div class="mb-8">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-semibold text-gray-700">آخر 10 عمليات دخل</h3>
+          <button onclick="showPage('الدخل')" class="text-blue-600 hover:text-blue-800">عرض الكل</button>
+        </div>
+        <div class="table-container rounded-lg border border-gray-200">
+          <table class="w-full">
+            <thead class="bg-gray-100">
+              <tr id="headers-الملخص-الدخل"></tr>
+            </thead>
+            <tbody id="body-الملخص-الدخل" class="divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-semibold text-gray-700">آخر 10 عمليات مصروفات</h3>
+          <button onclick="showPage('المصروفات')" class="text-blue-600 hover:text-blue-800">عرض الكل</button>
+        </div>
+        <div class="table-container rounded-lg border border-gray-200">
+          <table class="w-full">
+            <thead class="bg-gray-100">
+              <tr id="headers-الملخص-المصروفات"></tr>
+            </thead>
+            <tbody id="body-الملخص-المصروفات" class="divide-y divide-gray-200"></tbody>
+      </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbw5k0xGJYIGBppEQsOJbh-J6QnMaCpqq8TGe8Jh2H13ErU6_U5E3j2L0L69FAS0WoSrlA/exec";
+    let allData = {};
+
+    function showPage(name) {
+      // تحديث أزرار التنقل
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      
+      // إظهار الصفحة المطلوبة
+      document.querySelectorAll('.page').forEach(p => {
+        p.classList.add('hidden');
+      });
+      document.getElementById(name).classList.remove('hidden');
+      
+      // تحميل البيانات إذا لم تكن محملة بالفعل
+      if (!allData[name]) {
+      loadData(name);
+      } else {
+        renderTable(name, allData[name]);
+      }
+      
+      // إذا كانت صفحة الملخص، حساب الإحصائيات
+      if (name === 'الملخص') {
+        calculateSummary();
+      }
+    }
+
+    async function loadData(sheetName) {
+      try {
+        showLoading(true);
+      const res = await fetch(`${API_URL}?action=get&sheet=${encodeURIComponent(sheetName)}`);
+      const json = await res.json();
+        
+        if (json.status === "ok") {
+          allData[sheetName] = json.data;
+      renderTable(sheetName, json.data);
+        } else {
+          showError(`حدث خطأ أثناء جلب بيانات ${sheetName}`);
+        }
+      } catch (error) {
+        showError(`حدث خطأ في الاتصال: ${error.message}`);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function renderTable(sheetName, data) {
+      const headRow = document.getElementById(`headers-${sheetName}`);
+      const bodyEl = document.getElementById(`body-${sheetName}`);
+      
+      if (!headRow || !bodyEl) return;
+      
+      headRow.innerHTML = ""; 
+      bodyEl.innerHTML = "";
+
+      if (!data || !data.length) {
+        bodyEl.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">لا توجد بيانات متاحة</td></tr>`;
+        return;
+      }
+      
+      // إنشاء رأس الجدول
+      Object.keys(data[0]).forEach(key => {
+        headRow.innerHTML += `<th class="border p-3 bg-gray-200 text-gray-700">${key}</th>`;
+      });
+      
+      // إنشاء صفوف الجدول
+      data.forEach((row, index) => {
+        let tr = `<tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100">`;
+        Object.values(row).forEach(val => {
+          tr += `<td class="border p-2 text-gray-700">${val || '-'}</td>`;
+        });
+        tr += '</tr>';
+        bodyEl.innerHTML += tr;
+      });
+    }
+
+    async function submitForm(e, sheetName) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+      
+      try {
+        showLoading(true);
+      const res = await fetch(`${API_URL}?sheet=${encodeURIComponent(sheetName)}`, {
+        method: "POST",
+        body: JSON.stringify(data),
+          headers: { "Content-Type": "text/plain;charset=utf-8" }
+        });
+        
+        const result = await res.json();
+        if (result.status === "ok") {
+          showSuccess("تمت إضافة البيانات بنجاح");
+          form.reset();
+          // إعادة تحميل البيانات لتضمين الإضافة الجديدة
+          await loadData(sheetName);
+          // إذا كانت صفحة الملخص مفتوحة، تحديثها
+          if (document.getElementById('الملخص') && !document.getElementById('الملخص').classList.contains('hidden')) {
+            calculateSummary();
+          }
+        } else {
+          showError("حدث خطأ أثناء حفظ البيانات");
+        }
+      } catch (error) {
+        showError(`حدث خطأ في الاتصال: ${error.message}`);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function calculateSummary() {
+      // حساب إجمالي الدخل
+      const incomeData = allData['الدخل'] || [];
+      const totalIncome = incomeData.reduce((sum, row) => sum + (parseFloat(row['المبلغ']) || 0), 0);
+      document.getElementById('total-income').textContent = `${totalIncome.toFixed(2)} ج.م`;
+      
+      // حساب إجمالي المصروفات
+      const expensesData = allData['المصروفات'] || [];
+      const totalExpenses = expensesData.reduce((sum, row) => sum + (parseFloat(row['المبلغ']) || 0), 0);
+      document.getElementById('total-expenses').textContent = `${totalExpenses.toFixed(2)} ج.م`;
+      
+      // حساب صافي الربح
+      const netProfit = totalIncome - totalExpenses;
+      document.getElementById('net-profit').textContent = `${netProfit.toFixed(2)} ج.م`;
+      
+      // عرض آخر 10 عمليات دخل
+      const lastIncome = incomeData.slice(-10).reverse();
+      renderMiniTable('الملخص-الدخل', lastIncome);
+      
+      // عرض آخر 10 عمليات مصروفات
+      const lastExpenses = expensesData.slice(-10).reverse();
+      renderMiniTable('الملخص-المصروفات', lastExpenses);
+    }
+
+    function renderMiniTable(prefix, data) {
+      const headRow = document.getElementById(`headers-${prefix}`);
+      const bodyEl = document.getElementById(`body-${prefix}`);
+      
+      if (!headRow || !bodyEl) return;
+      
+      headRow.innerHTML = ""; 
+      bodyEl.innerHTML = "";
+
+      if (!data || !data.length) {
+        bodyEl.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">لا توجد بيانات متاحة</td></tr>`;
+        return;
+      }
+      
+      // إنشاء رأس الجدول المصغر (نعرض فقط بعض الأعمدة)
+      const columnsToShow = ['التاريخ', Object.keys(data[0]).find(k => k.includes('المبلغ') || k.includes('البند') || k.includes('المصدر'))];
+      
+      columnsToShow.forEach(key => {
+        if (data[0][key] !== undefined) {
+          headRow.innerHTML += `<th class="border p-2 bg-gray-200 text-gray-700">${key}</th>`;
+        }
+      });
+      
+      // إنشاء صفوف الجدول المصغر
+      data.forEach(row => {
+        let tr = `<tr class="hover:bg-gray-50">`;
+        columnsToShow.forEach(key => {
+          if (row[key] !== undefined) {
+            tr += `<td class="border p-2 text-gray-700">${row[key] || '-'}</td>`;
+          }
+        });
+        tr += '</tr>';
+        bodyEl.innerHTML += tr;
+      });
+    }
+
+    function exportToExcel(sheetName) {
+      if (!allData[sheetName] || allData[sheetName].length === 0) {
+        showError("لا توجد بيانات لتصديرها");
+        return;
+      }
+      
+      // إنشاء محتوى CSV
+      const headers = Object.keys(allData[sheetName][0]);
+      let csvContent = headers.join(",") + "\n";
+      
+      allData[sheetName].forEach(row => {
+        csvContent += headers.map(header => row[header]).join(",") + "\n";
+      });
+      
+      // إنشاء ملف وتنزيله
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `${sheetName}_${new Date().toLocaleDateString()}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function showLoading(show) {
+      const loader = document.getElementById('loader');
+      if (show) {
+        loader.style.display = 'flex';
+        loader.style.opacity = '1';
+      } else {
+        loader.style.opacity = '0';
+        setTimeout(() => {
+          loader.style.display = 'none';
+        }, 500);
+      }
+    }
+
+    function showSuccess(message) {
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-4 left-4 bg-green-500 text-white px-6 py-3 rounded shadow-lg animate-fadeIn';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.remove('animate-fadeIn');
+        toast.classList.add('animate-fadeOut');
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 500);
+      }, 3000);
+    }
+
+    function showError(message) {
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-4 left-4 bg-red-500 text-white px-6 py-3 rounded shadow-lg animate-fadeIn';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.remove('animate-fadeIn');
+        toast.classList.add('animate-fadeOut');
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 500);
+      }, 3000);
+    }
+
+    // عند تحميل الصفحة
+    window.onload = async () => {
+      // تحميل البيانات الأولية
+      await Promise.all([
+        loadData('الدخل'),
+        loadData('المصروفات'),
+        loadData('العمال')
+      ]);
+      
+      // إخفاء loader بعد تحميل البيانات
+      showLoading(false);
+      
+      // عرض صفحة المصروفات افتراضياً
+      showPage('المصروفات');
+    };
+  </script>
+</body>
+</html>
