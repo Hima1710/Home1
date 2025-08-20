@@ -1,820 +1,402 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>نظام الإدارة المالية المتكامل</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    body { 
-      font-family: "Tajawal", sans-serif;
-      background-color: #f8fafc;
-    }
-    #loader {
-      position: fixed; 
-      inset: 0;
-      background: rgba(255, 255, 255, 0.95);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      font-size: 1.5rem;
-      z-index: 9999;
-      transition: all 0.5s ease;
-    }
-    #welcome-message {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.8);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 10000;
-      color: white;
-      text-align: center;
-      padding: 2rem;
-    }
-    .spinner {
-      width: 50px;
-      height: 50px;
-      border: 5px solid #f3f3f3;
-      border-top: 5px solid #3b82f6;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 1rem;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    .page {
-      animation: fadeIn 0.3s ease;
-    }
-    .nav-btn {
-      transition: all 0.3s ease;
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .nav-btn.active {
-      font-weight: bold;
-      background-color: rgba(255, 255, 255, 0.2);
-    }
-    .nav-btn.active::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 25%;
-      width: 50%;
-      height: 3px;
-      background-color: white;
-    }
-    .table-container {
-      max-height: 60vh;
-      overflow-y: auto;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    table {
-      min-width: 100%;
-    }
-    th {
-      position: sticky;
-      top: 0;
-      background-color: #e2e8f0 !important;
-    }
-    .payment-method {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .payment-cash { color: #10b981; }
-    .payment-bank { color: #3b82f6; }
-    .payment-mobile { color: #8b5cf6; }
-    .toast {
-      animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s;
-    }
-    @keyframes toastIn {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    @keyframes toastOut {
-      from { transform: translateY(0); opacity: 1; }
-      to { transform: translateY(-20px); opacity: 0; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام حسابات خالي عادل</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons&display=swap">
 </head>
-<body class="bg-gray-50">
-
-  <div id="loader">
-    <div class="spinner"></div>
-    <div class="mt-4 text-xl font-semibold text-blue-600">جاري تحميل النظام...</div>
-  </div>
-
-  <div id="welcome-message">
-    <div class="bg-white rounded-lg p-8 max-w-md w-full text-gray-800 shadow-2xl">
-      <div class="text-5xl mb-6 text-blue-600">
-        <i class="fas fa-hand-pointer"></i>
-      </div>
-      <h2 class="text-2xl font-bold mb-4">مرحباً بك في نظام الإدارة المالية</h2>
-      <p class="mb-6">لبدء استخدام النظام، يرجى اختيار أحد الخيارات من شريط التنقل بالأعلى</p>
-      <button onclick="hideWelcomeMessage()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors">
-        فهمت، دعني أبدأ
-      </button>
-    </div>
-  </div>
-
-  <nav class="bg-blue-600 text-white p-4 shadow-lg sticky top-0 z-50">
-    <div class="container mx-auto flex justify-center md:justify-around flex-wrap gap-2">
-      <button onclick="showPage('الدخل')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-700">
-        <i class="fas fa-money-bill-wave"></i>
-        الدخل
-      </button>
-      <button onclick="showPage('المصروفات')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-700">
-        <i class="fas fa-receipt"></i>
-        المصروفات
-      </button>
-      <button onclick="showPage('العمال')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-700">
-        <i class="fas fa-hard-hat"></i>
-        العمال
-      </button>
-      <button onclick="showPage('الملخص')" class="nav-btn px-4 py-2 rounded-lg hover:bg-blue-700">
-        <i class="fas fa-chart-pie"></i>
-        الملخص
-      </button>
-    </div>
-  </nav>
-
-  <main class="container mx-auto p-4 md:p-6">
-    <!-- صفحة الدخل -->
-    <section id="الدخل" class="page hidden bg-white rounded-xl shadow-lg p-6">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-800">
-            <i class="fas fa-money-bill-wave text-blue-500 mr-2"></i>
-            سجل الدخل
-          </h2>
-          <p class="text-gray-600">تسجيل جميع إيرادات المشروع</p>
-        </div>
-        <div class="flex gap-3">
-          <button onclick="exportToExcel('الدخل')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2">
-            <i class="fas fa-file-excel"></i>
-            تصدير Excel
-          </button>
-          <button onclick="printPage('الدخل')" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2">
-            <i class="fas fa-print"></i>
-            طباعة
-          </button>
-        </div>
-      </div>
-      
-      <form onsubmit="submitForm(event, 'الدخل')" class="mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">التاريخ</label>
-          <input type="date" name="التاريخ" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">المصدر</label>
-          <input type="text" name="المصدر" placeholder="مصدر الدخل" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">المبلغ</label>
-          <input type="number" name="المبلغ" placeholder="المبلغ بالجنيه" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">طريقة الدفع</label>
-          <select name="طريقة الدفع" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-            <option value="نقدي">نقدي</option>
-            <option value="تحويل بنكي">تحويل بنكي</option>
-            <option value="محفظة إلكترونية">محفظة إلكترونية</option>
-          </select>
-        </div>
-        <div class="flex items-end">
-          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 w-full h-[42px] flex items-center justify-center gap-2">
-            <i class="fas fa-plus"></i>
-            إضافة
-          </button>
-        </div>
-        <div class="md:col-span-4">
-          <label class="block text-gray-700 mb-2 font-medium">ملاحظات</label>
-          <input type="text" name="ملاحظات" placeholder="أي ملاحظات إضافية" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-        </div>
-      </form>
-      
-      <div class="table-container rounded-lg border border-gray-200">
-        <table class="w-full">
-          <thead class="bg-gray-100">
-            <tr id="headers-الدخل"></tr>
-          </thead>
-          <tbody id="body-الدخل" class="divide-y divide-gray-200"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- صفحة المصروفات -->
-    <section id="المصروفات" class="page hidden bg-white rounded-xl shadow-lg p-6">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-800">
-            <i class="fas fa-receipt text-red-500 mr-2"></i>
-            سجل المصروفات
-          </h2>
-          <p class="text-gray-600">تسجيل جميع مصروفات المشروع</p>
-        </div>
-        <div class="flex gap-3">
-          <button onclick="exportToExcel('المصروفات')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2">
-            <i class="fas fa-file-excel"></i>
-            تصدير Excel
-          </button>
-          <button onclick="printPage('المصروفات')" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2">
-            <i class="fas fa-print"></i>
-            طباعة
-          </button>
-        </div>
-      </div>
-      
-      <form onsubmit="submitForm(event, 'المصروفات')" class="mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">التاريخ</label>
-          <input type="date" name="التاريخ" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">البند</label>
-          <input type="text" name="البند" placeholder="بند المصروف" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">المبلغ</label>
-          <input type="number" name="المبلغ" placeholder="المبلغ بالجنيه" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">طريقة الدفع</label>
-          <select name="طريقة الدفع" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-            <option value="نقدي">نقدي</option>
-            <option value="تحويل بنكي">تحويل بنكي</option>
-            <option value="محفظة إلكترونية">محفظة إلكترونية</option>
-          </select>
-        </div>
-        <div class="flex items-end">
-          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 w-full h-[42px] flex items-center justify-center gap-2">
-            <i class="fas fa-plus"></i>
-            إضافة
-          </button>
-        </div>
-        <div class="md:col-span-4">
-          <label class="block text-gray-700 mb-2 font-medium">ملاحظات</label>
-          <input type="text" name="ملاحظات" placeholder="أي ملاحظات إضافية" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-        </div>
-      </form>
-      
-      <div class="table-container rounded-lg border border-gray-200">
-        <table class="w-full">
-          <thead class="bg-gray-100">
-            <tr id="headers-المصروفات"></tr>
-          </thead>
-          <tbody id="body-المصروفات" class="divide-y divide-gray-200"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- صفحة العمال -->
-    <section id="العمال" class="page hidden bg-white rounded-xl shadow-lg p-6">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-800">
-            <i class="fas fa-hard-hat text-amber-500 mr-2"></i>
-            سجل العمال
-          </h2>
-          <p class="text-gray-600">تسجيل مدفوعات العمال والخدمات</p>
-        </div>
-        <div class="flex gap-3">
-          <button onclick="exportToExcel('العمال')" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2">
-            <i class="fas fa-file-excel"></i>
-            تصدير Excel
-          </button>
-          <button onclick="printPage('العمال')" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2">
-            <i class="fas fa-print"></i>
-            طباعة
-          </button>
-        </div>
-      </div>
-      
-      <form onsubmit="submitForm(event, 'العمال')" class="mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">التاريخ</label>
-          <input type="date" name="التاريخ" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">اسم العامل</label>
-          <input type="text" name="اسم العامل" placeholder="اسم العامل" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">نوع الخدمة</label>
-          <input type="text" name="نوع الخدمة" placeholder="نوع الخدمة المقدمة" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">المبلغ المدفوع</label>
-          <input type="number" name="المبلغ المدفوع" placeholder="المبلغ بالجنيه" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-        </div>
-        <div class="flex items-end">
-          <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 w-full h-[42px] flex items-center justify-center gap-2">
-            <i class="fas fa-plus"></i>
-            إضافة
-          </button>
-        </div>
-        <div>
-          <label class="block text-gray-700 mb-2 font-medium">طريقة الدفع</label>
-          <select name="طريقة الدفع" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-            <option value="نقدي">نقدي</option>
-            <option value="تحويل بنكي">تحويل بنكي</option>
-            <option value="محفظة إلكترونية">محفظة إلكترونية</option>
-          </select>
-        </div>
-        <div class="md:col-span-3">
-          <label class="block text-gray-700 mb-2 font-medium">ملاحظات</label>
-          <input type="text" name="ملاحظات" placeholder="أي ملاحظات إضافية" class="p-2 border rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-        </div>
-      </form>
-      
-      <div class="table-container rounded-lg border border-gray-200">
-        <table class="w-full">
-          <thead class="bg-gray-100">
-            <tr id="headers-العمال"></tr>
-          </thead>
-          <tbody id="body-العمال" class="divide-y divide-gray-200"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- صفحة الملخص -->
-    <section id="الملخص" class="page hidden bg-white rounded-xl shadow-lg p-6">
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-800">
-            <i class="fas fa-chart-pie text-purple-500 mr-2"></i>
-            ملخص الحسابات
-          </h2>
-          <p class="text-gray-600">نظرة عامة على الأداء المالي</p>
-        </div>
-        <button onclick="refreshSummary()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
-          <i class="fas fa-sync-alt"></i>
-          تحديث
-        </button>
-      </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-blue-50 p-6 rounded-xl border border-blue-200 shadow-sm">
-          <div class="flex justify-between items-start">
-            <div>
-              <h3 class="text-lg font-semibold text-blue-800 mb-2">إجمالي الدخل</h3>
-              <p id="total-income" class="text-3xl font-bold text-blue-600">0 ج.م</p>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+                <h1>نظام حسابات خالي عادل</h1>
             </div>
-            <div class="bg-blue-100 p-3 rounded-lg text-blue-600">
-              <i class="fas fa-money-bill-wave text-xl"></i>
-            </div>
-          </div>
-          <div class="mt-4 text-sm text-blue-600">
-            <i class="fas fa-info-circle mr-1"></i>
-            <span id="income-count">0</span> عملية دخل
-          </div>
+            <nav class="nav">
+                <button class="nav-toggle" id="navToggle">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+                <ul class="nav-menu" id="navMenu">
+                    <li><a href="#dashboard" class="nav-link active">الرئيسية</a></li>
+                    <li><a href="#income" class="nav-link">الدخل</a></li>
+                    <li><a href="#expenses" class="nav-link">المصروفات</a></li>
+                    <li><a href="#workers" class="nav-link">العمال</a></li>
+                    <li><a href="#returns" class="nav-link">الاسترجاع</a></li>
+                                        <li><a href="#summary" class="nav-link">الملخص</a></li>
+ 
+                </ul>
+                <button class="btn btn-danger logout-btn" onclick="logout()">
+                    <i class="material-icons">logout</i>
+                    تسجيل خروج
+                </button>
+            </nav>
         </div>
-        
-        <div class="bg-red-50 p-6 rounded-xl border border-red-200 shadow-sm">
-          <div class="flex justify-between items-start">
-            <div>
-              <h3 class="text-lg font-semibold text-red-800 mb-2">إجمالي المصروفات</h3>
-              <p id="total-expenses" class="text-3xl font-bold text-red-600">0 ج.م</p>
+    </header>
+
+    <!-- Login Section -->
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-container">
+            <div class="login-header">
+                               <i class="material-icons">trending_up</i>
+               <h2>تسجيل الدخول</h2>
+                <p>أدخل بياناتك للوصول للنظام</p>
             </div>
-            <div class="bg-red-100 p-3 rounded-lg text-red-600">
-              <i class="fas fa-receipt text-xl"></i>
-            </div>
-          </div>
-          <div class="mt-4 text-sm text-red-600">
-            <i class="fas fa-info-circle mr-1"></i>
-            <span id="expenses-count">0</span> عملية صرف
-          </div>
-        </div>
-        
-        <div class="bg-green-50 p-6 rounded-xl border border-green-200 shadow-sm">
-          <div class="flex justify-between items-start">
-            <div>
-              <h3 class="text-lg font-semibold text-green-800 mb-2"> الرصيد الصافي</h3>
-              <p id="net-profit" class="text-3xl font-bold text-green-600">0 ج.م</p>
-            </div>
-            <div class="bg-green-100 p-3 rounded-lg text-green-600">
-              <i class="fas fa-chart-line text-xl"></i>
-            </div>
-          </div>
-          <div class="mt-4 text-sm text-green-600">
-            <i class="fas fa-info-circle mr-1"></i>
-            آخر تحديث: <span id="last-update">الآن</span>
-          </div>
-        </div>
-      </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-semibold text-gray-700">آخر عمليات الدخل</h3>
-            <button onclick="showPage('الدخل')" class="text-blue-600 hover:text-blue-800 flex items-center gap-1">
-              عرض الكل
-              <i class="fas fa-chevron-left"></i>
-            </button>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-100">
-                <tr id="headers-الملخص-الدخل"></tr>
-              </thead>
-              <tbody id="body-الملخص-الدخل" class="divide-y divide-gray-200"></tbody>
-            </table>
-          </div>
-        </div>
-        
-        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-semibold text-gray-700">آخر عمليات المصروفات</h3>
-            <button onclick="showPage('المصروفات')" class="text-blue-600 hover:text-blue-800 flex items-center gap-1">
-              عرض الكل
-              <i class="fas fa-chevron-left"></i>
-            </button>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-100">
-                <tr id="headers-الملخص-المصروفات"></tr>
-              </thead>
-              <tbody id="body-الملخص-المصروفات" class="divide-y divide-gray-200"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbw5k0xGJYIGBppEQsOJbh-J6QnMaCpqq8TGe8Jh2H13ErU6_U5E3j2L0L69FAS0WoSrlA/exec";
-    let allData = {};
-
-    // إخفاء رسالة الترحيب فوراً عند الضغط
-    function hideWelcomeMessage() {
-      document.getElementById('welcome-message').style.display = 'none';
-    }
-
-    // عرض صفحة معينة
-    function showPage(name) {
-      // تحديث أزرار التنقل
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('active');
-      });
-      event.target.classList.add('active');
-      
-      // إظهار الصفحة المطلوبة
-      document.querySelectorAll('.page').forEach(p => {
-        p.classList.add('hidden');
-      });
-      document.getElementById(name).classList.remove('hidden');
-      
-      // تحميل البيانات إذا لم تكن محملة بالفعل
-      if (!allData[name]) {
-        loadData(name);
-      } else {
-        renderTable(name, allData[name]);
-      }
-      
-      // إذا كانت صفحة الملخص، حساب الإحصائيات
-      if (name === 'الملخص') {
-        calculateSummary();
-      }
-    }
-
-    // تحميل البيانات من API
-    async function loadData(sheetName) {
-      try {
-        showLoading(true);
-        const res = await fetch(`${API_URL}?action=get&sheet=${encodeURIComponent(sheetName)}`);
-        const json = await res.json();
-        
-        if (json.status === "ok") {
-          allData[sheetName] = json.data;
-          renderTable(sheetName, json.data);
-        } else {
-          showError(`حدث خطأ أثناء جلب بيانات ${sheetName}`);
-        }
-      } catch (error) {
-        showError(`حدث خطأ في الاتصال: ${error.message}`);
-      } finally {
-        showLoading(false);
-      }
-    }
-
-    // عرض الجدول
-    function renderTable(sheetName, data) {
-      const headRow = document.getElementById(`headers-${sheetName}`);
-      const bodyEl = document.getElementById(`body-${sheetName}`);
-      
-      if (!headRow || !bodyEl) return;
-      
-      headRow.innerHTML = ""; 
-      bodyEl.innerHTML = "";
-
-      if (!data || !data.length) {
-        bodyEl.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">لا توجد بيانات متاحة</td></tr>`;
-        return;
-      }
-      
-      // إنشاء رأس الجدول
-      Object.keys(data[0]).forEach(key => {
-        headRow.innerHTML += `<th class="border p-3 bg-gray-200 text-gray-700 font-medium">${key}</th>`;
-      });
-      
-      // إنشاء صفوف الجدول
-      data.forEach((row, index) => {
-        let tr = `<tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100">`;
-        Object.entries(row).forEach(([key, val]) => {
-          if (key === 'طريقة الدفع') {
-            tr += `<td class="border p-2 text-gray-700">
-              <div class="payment-method ${getPaymentMethodClass(val)}">
-                <i class="${getPaymentMethodIcon(val)}"></i>
-                ${val}
-              </div>
-            </td>`;
-          } else {
-            tr += `<td class="border p-2 text-gray-700">${val || '-'}</td>`;
-          }
-        });
-        tr += '</tr>';
-        bodyEl.innerHTML += tr;
-      });
-    }
-
-    // الحصول على أيقونة طريقة الدفع
-    function getPaymentMethodIcon(method) {
-      switch(method) {
-        case 'نقدي': return 'fas fa-money-bill-wave payment-cash';
-        case 'تحويل بنكي': return 'fas fa-university payment-bank';
-        case 'محفظة إلكترونية': return 'fas fa-mobile-alt payment-mobile';
-        default: return 'fas fa-question-circle';
-      }
-    }
-
-    // الحصول على كلاس طريقة الدفع
-    function getPaymentMethodClass(method) {
-      switch(method) {
-        case 'نقدي': return 'payment-cash';
-        case 'تحويل بنكي': return 'payment-bank';
-        case 'محفظة إلكترونية': return 'payment-mobile';
-        default: return '';
-      }
-    }
-
-    // إرسال النموذج مع منع التكرار
-    async function submitForm(e, sheetName) {
-      e.preventDefault();
-      const form = e.target;
-      const submitBtn = form.querySelector('button[type="submit"]');
-      
-      // تعطيل الزر لمنع التكرار
-      submitBtn.disabled = true;
-      submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-      
-      const formData = new FormData(form);
-      const data = Object.fromEntries(formData.entries());
-      
-      try {
-        showLoading(true);
-        const res = await fetch(`${API_URL}?sheet=${encodeURIComponent(sheetName)}`, {
-          method: "POST",
-          body: JSON.stringify(data),
-          headers: { "Content-Type": "text/plain;charset=utf-8" }
-        });
-        
-        const result = await res.json();
-        if (result.status === "ok") {
-          showSuccess("تمت إضافة البيانات بنجاح");
-          form.reset();
-          await loadData(sheetName);
-          if (document.getElementById('الملخص') && !document.getElementById('الملخص').classList.contains('hidden')) {
-            calculateSummary();
-          }
-        } else {
-          showError("حدث خطأ أثناء حفظ البيانات");
-        }
-      } catch (error) {
-        showError(`حدث خطأ في الاتصال: ${error.message}`);
-      } finally {
-        showLoading(false);
-        // إعادة تمكين الزر بعد الانتهاء
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-      }
-    }
-
-    // حساب الملخص المالي
-    function calculateSummary() {
-      // حساب إجمالي الدخل
-      const incomeData = allData['الدخل'] || [];
-      const totalIncome = incomeData.reduce((sum, row) => sum + (parseFloat(row['المبلغ']) || 0), 0);
-      document.getElementById('total-income').textContent = `${totalIncome.toFixed(2)} ج.م`;
-      document.getElementById('income-count').textContent = incomeData.length;
-      
-      // حساب إجمالي المصروفات
-      const expensesData = allData['المصروفات'] || [];
-      const totalExpenses = expensesData.reduce((sum, row) => sum + (parseFloat(row['المبلغ']) || 0), 0);
-      document.getElementById('total-expenses').textContent = `${totalExpenses.toFixed(2)} ج.م`;
-      document.getElementById('expenses-count').textContent = expensesData.length;
-      
-      // حساب صافي الربح
-      const netProfit = totalIncome - totalExpenses;
-      document.getElementById('net-profit').textContent = `${netProfit.toFixed(2)} ج.م`;
-      
-      // تحديث وقت التحديث الأخير
-      document.getElementById('last-update').textContent = new Date().toLocaleTimeString('ar-EG');
-      
-      // عرض آخر 5 عمليات دخل
-      const lastIncome = incomeData.slice(-5).reverse();
-      renderMiniTable('الملخص-الدخل', lastIncome);
-      
-      // عرض آخر 5 عمليات مصروفات
-      const lastExpenses = expensesData.slice(-5).reverse();
-      renderMiniTable('الملخص-المصروفات', lastExpenses);
-    }
-
-    // عرض جدول مصغر
-    function renderMiniTable(prefix, data) {
-      const headRow = document.getElementById(`headers-${prefix}`);
-      const bodyEl = document.getElementById(`body-${prefix}`);
-      
-      if (!headRow || !bodyEl) return;
-      
-      headRow.innerHTML = ""; 
-      bodyEl.innerHTML = "";
-
-      if (!data || !data.length) {
-        bodyEl.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">لا توجد بيانات متاحة</td></tr>`;
-        return;
-      }
-      
-      // إنشاء رأس الجدول المصغر (نعرض فقط بعض الأعمدة)
-      const columnsToShow = ['التاريخ', 'المبلغ', 'طريقة الدفع'];
-      if (prefix.includes('الدخل')) columnsToShow.splice(1, 0, 'المصدر');
-      if (prefix.includes('المصروفات')) columnsToShow.splice(1, 0, 'البند');
-      
-      columnsToShow.forEach(key => {
-        if (data[0][key] !== undefined) {
-          headRow.innerHTML += `<th class="border p-2 bg-gray-200 text-gray-700 font-medium">${key}</th>`;
-        }
-      });
-      
-      // إنشاء صفوف الجدول المصغر
-      data.forEach(row => {
-        let tr = `<tr class="hover:bg-gray-50">`;
-        columnsToShow.forEach(key => {
-          if (row[key] !== undefined) {
-            if (key === 'طريقة الدفع') {
-              tr += `<td class="border p-2 text-gray-700">
-                <div class="payment-method ${getPaymentMethodClass(row[key])}">
-                  <i class="${getPaymentMethodIcon(row[key])}"></i>
-                  ${row[key]}
+            <form class="login-form" id="loginForm">
+                <div class="form-group">
+                    <label for="phone">رقم الهاتف</label>
+                    <input type="tel" id="phone" name="phone" required placeholder="أدخل رقم الهاتف">
                 </div>
-              </td>`;
-            } else {
-              tr += `<td class="border p-2 text-gray-700">${row[key] || '-'}</td>`;
-            }
-          }
-        });
-        tr += '</tr>';
-        bodyEl.innerHTML += tr;
-      });
-    }
-
-    // تصدير إلى Excel
-    function exportToExcel(sheetName) {
-      if (!allData[sheetName] || allData[sheetName].length === 0) {
-        showError("لا توجد بيانات لتصديرها");
-        return;
-      }
-      
-      // إنشاء محتوى CSV
-      const headers = Object.keys(allData[sheetName][0]);
-      let csvContent = headers.join(",") + "\n";
-      
-      allData[sheetName].forEach(row => {
-        csvContent += headers.map(header => row[header]).join(",") + "\n";
-      });
-      
-      // إنشاء ملف وتنزيله
-      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `${sheetName}_${new Date().toLocaleDateString('ar-EG')}.csv`);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    // طباعة الصفحة
-    function printPage(sheetName) {
-      const printContent = document.getElementById(sheetName).innerHTML;
-      const originalContent = document.body.innerHTML;
-      
-      document.body.innerHTML = `
-        <div dir="rtl" style="font-family: 'Tajawal', sans-serif; padding: 20px;">
-          <h1 style="text-align: center; margin-bottom: 20px;">${sheetName}</h1>
-          ${printContent}
+                <div class="form-group">
+                    <label for="password">كلمة المرور</label>
+                    <input type="password" id="password" name="password" required placeholder="أدخل كلمة المرور">
+                </div>
+                                   <button type="submit" class="btn btn-primary login-btn">
+                       <i class="material-icons">login</i>
+                       دخول
+                   </button>
+            </form>
+            <div class="login-error" id="loginError"></div>
         </div>
-      `;
-      
-      window.print();
-      document.body.innerHTML = originalContent;
-      showPage(sheetName); // استعادة الصفحة الأصلية
-    }
+    </div>
 
-    // تحديث الملخص
-    function refreshSummary() {
-      showLoading(true);
-      Promise.all([
-        loadData('الدخل'),
-        loadData('المصروفات')
-      ]).then(() => {
-        calculateSummary();
-        showSuccess("تم تحديث البيانات بنجاح");
-      }).catch(error => {
-        showError(`حدث خطأ أثناء التحديث: ${error.message}`);
-      }).finally(() => {
-        showLoading(false);
-      });
-    }
+    <!-- Main Content -->
+    <main class="main" id="mainContent" style="display: none;">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="section active">
+            <div class="container">
+                <div class="section-header">
+                    <h2>لوحة التحكم</h2>
+                    <p>مرحباً بك في نظام الحسابات المتكامل</p>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-arrow-up text-success"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>إجمالي الدخل</h3>
+                            <p class="stat-value" id="totalIncome">0</p>
+                            <span class="stat-currency">جنيه مصري</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-arrow-down text-danger"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>إجمالي المصروفات</h3>
+                            <p class="stat-value" id="totalExpenses">0</p>
+                            <span class="stat-currency">جنيه مصري</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users text-primary"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>عدد العمال</h3>
+                            <p class="stat-value" id="totalWorkers">0</p>
+                            <span class="stat-currency">عامل</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-exchange-alt text-warning"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>عمليات الاسترجاع</h3>
+                            <p class="stat-value" id="totalReturns">0</p>
+                            <span class="stat-currency">عملية</span>
+                        </div>
+                    </div>
+                </div>
 
-    // عرض مؤشر التحميل
-    function showLoading(show) {
-      const loader = document.getElementById('loader');
-      if (show) {
-        loader.style.display = 'flex';
-        loader.style.opacity = '1';
-      } else {
-        loader.style.opacity = '0';
-        setTimeout(() => {
-          loader.style.display = 'none';
-        }, 500);
-      }
-    }
+                <div class="quick-actions">
+                    <h3>إجراءات سريعة</h3>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="showAddModal('income')">
+                            <i class="fas fa-plus"></i>
+                            إضافة دخل جديد
+                        </button>
+                        <button class="btn btn-danger" onclick="showAddModal('expenses')">
+                            <i class="fas fa-minus"></i>
+                            إضافة مصروف جديد
+                        </button>
+                        <button class="btn btn-success" onclick="showAddModal('workers')">
+                            <i class="fas fa-user-plus"></i>
+                            إضافة عامل جديد
+                        </button>
+                        <button class="btn btn-warning" onclick="showAddModal('returns')">
+                            <i class="fas fa-undo"></i>
+                            إضافة استرجاع
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-    // عرض رسالة نجاح
-    function showSuccess(message) {
-      const toast = document.createElement('div');
-      toast.className = 'toast fixed bottom-6 left-6 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50';
-      toast.innerHTML = `
-        <i class="fas fa-check-circle"></i>
-        ${message}
-      `;
-      document.body.appendChild(toast);
-      
-      setTimeout(() => {
-        document.body.removeChild(toast);
-      }, 3000);
-    }
+        <!-- Income Section -->
+        <section id="income" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>إدارة الدخل</h2>
+                    <button class="btn btn-primary" onclick="showAddModal('income')">
+                        <i class="fas fa-plus"></i>
+                        إضافة دخل جديد
+                    </button>
+                </div>
+                <div class="data-table-container">
+                    <table class="data-table" id="incomeTable">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المصدر</th>
+                                <th>المبلغ</th>
+                                <th>العملة</th>
+                                <th>طريقة الدفع</th>
+                                <th>ملاحظات</th>
+                                <th>المستخدم</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incomeTableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
 
-    // عرض رسالة خطأ
-    function showError(message) {
-      const toast = document.createElement('div');
-      toast.className = 'toast fixed bottom-6 left-6 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50';
-      toast.innerHTML = `
-        <i class="fas fa-exclamation-circle"></i>
-        ${message}
-      `;
-      document.body.appendChild(toast);
-      
-      setTimeout(() => {
-        document.body.removeChild(toast);
-      }, 3000);
-    }
+        <!-- Expenses Section -->
+        <section id="expenses" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>إدارة المصروفات</h2>
+                    <button class="btn btn-danger" onclick="showAddModal('expenses')">
+                        <i class="fas fa-plus"></i>
+                        إضافة مصروف جديد
+                    </button>
+                </div>
+                <div class="data-table-container">
+                    <table class="data-table" id="expensesTable">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المصدر</th>
+                                <th>المبلغ</th>
+                                <th>العملة</th>
+                                <th>طريقة الدفع</th>
+                                <th>ملاحظات</th>
+                                <th>المستخدم</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expensesTableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
 
-    // عند تحميل الصفحة
-    window.onload = async () => {
-      // عرض رسالة الترحيب
-      setTimeout(() => {
-        document.getElementById('welcome-message').classList.remove('hidden');
-      }, 1000);
-      
-      // تحميل البيانات الأولية
-      await Promise.all([
-        loadData('الدخل'),
-        loadData('المصروفات'),
-        loadData('العمال')
-      ]);
-      
-      // إخفاء loader بعد تحميل البيانات
-      showLoading(false);
-      
-      // عرض صفحة المصروفات افتراضياً
-      showPage('المصروفات');
-    };
-  </script>
+        <!-- Workers Section -->
+        <section id="workers" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>إدارة العمال</h2>
+                    <button class="btn btn-success" onclick="showAddModal('workers')">
+                        <i class="fas fa-plus"></i>
+                        إضافة عامل جديد
+                    </button>
+                </div>
+                <div class="data-table-container">
+                    <table class="data-table" id="workersTable">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>اسم العامل</th>
+                                <th>المبلغ</th>
+                                <th>العملة</th>
+                                <th>طريقة الدفع</th>
+                                <th>ملاحظات</th>
+                                <th>المستخدم</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workersTableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Returns Section -->
+        <section id="returns" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>إدارة الاسترجاع</h2>
+                    <button class="btn btn-warning" onclick="showAddModal('returns')">
+                        <i class="fas fa-plus"></i>
+                        إضافة استرجاع جديد
+                    </button>
+                </div>
+                <div class="data-table-container">
+                    <table class="data-table" id="returnsTable">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>المصدر</th>
+                                <th>المبلغ</th>
+                                <th>العملة</th>
+                                <th>طريقة الدفع</th>
+                                <th>ملاحظات</th>
+                                <th>المستخدم</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="returnsTableBody">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Section -->
+        <section id="summary" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>الملخص المالي</h2>
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <h3>إجمالي الدخل</h3>
+                        <div class="summary-amounts">
+                            <div class="amount-item">
+                                <span class="currency">جنيه مصري:</span>
+                                <span class="amount" id="summaryIncomeEGP">0</span>
+                            </div>
+                            <div class="amount-item">
+                                <span class="currency">دولار أمريكي:</span>
+                                <span class="amount" id="summaryIncomeUSD">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-card">
+                        <h3>إجمالي المصروفات</h3>
+                        <div class="summary-amounts">
+                            <div class="amount-item">
+                                <span class="currency">جنيه مصري:</span>
+                                <span class="amount" id="summaryExpensesEGP">0</span>
+                            </div>
+                            <div class="amount-item">
+                                <span class="currency">دولار أمريكي:</span>
+                                <span class="amount" id="summaryExpensesUSD">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-card">
+                        <h3>صافي الربح</h3>
+                        <div class="summary-amounts">
+                            <div class="amount-item">
+                                <span class="currency">جنيه مصري:</span>
+                                <span class="amount" id="summaryNetEGP">0</span>
+                            </div>
+                            <div class="amount-item">
+                                <span class="currency">دولار أمريكي:</span>
+                                <span class="amount" id="summaryNetUSD">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">إضافة جديد</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addForm">
+                    <div class="form-group">
+                        <label for="date">التاريخ</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                    
+                    <div class="form-group" id="sourceGroup">
+                        <label for="source">المصدر</label>
+                        <input type="text" id="source" name="source" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="amount">المبلغ</label>
+                        <input type="number" id="amount" name="amount" step="0.01" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="currency">العملة</label>
+                        <select id="currency" name="currency" required>
+                            <option value="EGP">جنيه مصري</option>
+                            <option value="USD">دولار أمريكي</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="paymentMethod">طريقة الدفع</label>
+                        <select id="paymentMethod" name="paymentMethod" required>
+                            <option value="نقدي">نقدي</option>
+                            <option value="تحويل بنكي">تحويل بنكي</option>
+                            <option value="شيك">شيك</option>
+                            <option value="بطاقة ائتمان">بطاقة ائتمان</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes">ملاحظات</label>
+                        <textarea id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="user">المستخدم</label>
+                        <input type="text" id="user" name="user" required>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">حفظ</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner"></div>
+        <p>جاري التحميل...</p>
+    </div>
+
+    <script src="script.js"></script>
 </body>
-
 </html>
