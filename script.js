@@ -4,6 +4,14 @@
 // عنوان Google Apps Script
 const GAS_URL = "https://script.google.com/macros/s/AKfycbw5k0xGJYIGBppEQsOJbh-J6QnMaCpqq8TGe8Jh2H13ErU6_U5E3j2L0L69FAS0WoSrlA/exec";
 
+// ترجمة أنواع الأقسام الإنجليزية إلى العربية التي يتوقعها الخادم
+const sheetMapping = {
+  "income": "الدخل",
+  "expenses": "المصروفات",
+  "workers": "العمال",
+  "returns": "الاسترجاع"
+};
+
 // تهيئة التطبيق عند تحميل الصفحة
 document.addEventListener("DOMContentLoaded", function () {
   setupNavigation();
@@ -177,16 +185,27 @@ function populateSummary(data) {
 // حذف صف من البيانات
 function deleteRow(type, index) {
   if (confirm("هل أنت متأكد من أنك تريد حذف هذا السجل؟")) {
-    jsonpRequest(
-      `${GAS_URL}?action=delete&type=${type}&index=${index}`,
-      function (resp) {
-        if (resp.status === "ok") {
-          loadAllData();
-        } else {
-          alert("حدث خطأ أثناء الحذف: " + (resp.message || ""));
-        }
+    // الحصول على اسم الشيت العربي
+    const arabicSheetName = sheetMapping[type] || type;
+    
+    // إنشاء رابط الطلب مع المعلمات المطلوبة
+    const urlParams = new URLSearchParams();
+    urlParams.append('action', 'delete');
+    urlParams.append('sheet', arabicSheetName);
+    urlParams.append('row', index);
+    
+    const fullUrl = `${GAS_URL}?${urlParams.toString()}`;
+    console.log("URL طلب الحذف:", fullUrl);
+    
+    // إرسال الطلب
+    jsonpRequest(fullUrl, function (resp) {
+      if (resp.status === "ok") {
+        loadAllData();
+      } else {
+        alert("حدث خطأ أثناء الحذف: " + (resp.message || ""));
+        console.error("خطأ في حذف البيانات:", resp);
       }
-    );
+    });
   }
 }
 
@@ -234,14 +253,6 @@ function handleAddData(e) {
   // الحصول على نوع الشيت من السمة المخزنة
   const sheetType = document.getElementById("addForm").getAttribute("data-type") || "income";
   
-  // ترجمة أنواع الأقسام الإنجليزية إلى العربية التي يتوقعها الخادم
-  const sheetMapping = {
-    "income": "الدخل",
-    "expenses": "المصروفات",
-    "workers": "العمال",
-    "returns": "الاسترجاع"
-  };
-  
   // الحصول على اسم الشيت العربي
   const arabicSheetName = sheetMapping[sheetType] || sheetType;
   
@@ -264,7 +275,6 @@ function handleAddData(e) {
   };
   
   // استخدام صيغة مختلفة للإرسال تتوافق مع ما يتوقعه الخادم
-  // تضمين البيانات في رابط الطلب مباشرة بدلاً من كائن JSON
   const urlParams = new URLSearchParams();
   urlParams.append('action', 'add');
   urlParams.append('sheet', arabicSheetName);
@@ -275,7 +285,7 @@ function handleAddData(e) {
   
   // طباعة الرابط الكامل للتصحيح
   const fullUrl = `${GAS_URL}?${urlParams.toString()}`;
-  console.log("URL الطلب:", fullUrl);
+  console.log("URL طلب الإضافة:", fullUrl);
   
   // إرسال الطلب
   jsonpRequest(fullUrl, function (resp) {
