@@ -1,226 +1,199 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>نظام حسابات خالي عادل</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Icons&display=swap" />
+    <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="logo">
-                <i class="fas fa-chart-line"></i>
-                <h1>نظام حسابات خالي عادل</h1>
-            </div>
-            <nav class="nav">
-                <button class="nav-toggle" id="navToggle">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <ul class="nav-menu" id="navMenu">
-                    <li><a href="#dashboard" class="nav-link active">الرئيسية</a></li>
-                    <li><a href="#income" class="nav-link">الدخل</a></li>
-                    <li><a href="#expenses" class="nav-link">المصروفات</a></li>
-                    <li><a href="#workers" class="nav-link">العمال</a></li>
-                    <li><a href="#returns" class="nav-link">الاسترجاع</a></li>
-                                        <li><a href="#summary" class="nav-link">الملخص</a></li>
- 
-                </ul>
-                <button class="btn btn-danger logout-btn" onclick="logout()">
-                    <i class="material-icons">logout</i>
-                    تسجيل خروج
-                </button>
-            </nav>
-        </div>
-    </header>
-
-    <!-- Login Section -->
-    <div class="login-overlay" id="loginOverlay">
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="login-overlay">
         <div class="login-container">
             <div class="login-header">
-                               <i class="material-icons">trending_up</i>
-               <h2>تسجيل الدخول</h2>
-                <p>أدخل بياناتك للوصول للنظام</p>
+                <i class="material-icons">lock</i>
+                <h2>تسجيل الدخول</h2>
             </div>
-            <form class="login-form" id="loginForm">
+            <form id="loginForm" class="login-form">
                 <div class="form-group">
                     <label for="phone">رقم الهاتف</label>
-                    <input type="tel" id="phone" name="phone" required placeholder="أدخل رقم الهاتف">
+                    <input type="text" id="phone" required />
                 </div>
                 <div class="form-group">
                     <label for="password">كلمة المرور</label>
-                    <input type="password" id="password" name="password" required placeholder="أدخل كلمة المرور">
+                    <input type="password" id="password" required />
                 </div>
-                                   <button type="submit" class="btn btn-primary login-btn">
-                       <i class="material-icons">login</i>
-                       دخول
-                   </button>
+                <button type="submit" class="btn btn-primary login-btn">تسجيل الدخول</button>
+                <div id="loginError" class="login-error"></div>
             </form>
-            <div class="login-error" id="loginError"></div>
         </div>
     </div>
 
     <!-- Main Content -->
-    <main class="main" id="mainContent" style="display: none;">
-        <!-- Dashboard Section -->
-        <section id="dashboard" class="section active">
+    <div id="mainContent" style="display:none;">
+        <header class="header">
             <div class="container">
+                <div class="logo">
+                    <i class="material-icons">account_balance</i>
+                    <h1>النظام المالي</h1>
+                </div>
+                <nav class="nav">
+                    <button id="navToggle" class="nav-toggle">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <ul id="navMenu" class="nav-menu">
+                        <li><a href="#dashboard" class="nav-link active">لوحة التحكم</a></li>
+                        <li><a href="#income" class="nav-link">الدخل</a></li>
+                        <li><a href="#expenses" class="nav-link">المصروفات</a></li>
+                        <li><a href="#workers" class="nav-link">العمال</a></li>
+                        <li><a href="#returns" class="nav-link">الاسترجاع</a></li>
+                        <li>
+                            <button onclick="logout()" class="btn btn-danger logout-btn">تسجيل الخروج</button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main container">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
                 <div class="section-header">
                     <h2>لوحة التحكم</h2>
-                    <p>مرحباً بك في نظام الحسابات المتكامل</p>
+                    <p>ملخص سريع لكل الحسابات</p>
                 </div>
-                
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">
-                            <i class="fas fa-arrow-up text-success"></i>
+                            <i class="material-icons">arrow_upward</i>
                         </div>
                         <div class="stat-content">
-                            <h3>إجمالي الدخل</h3>
-                            <p class="stat-value" id="totalIncome">0</p>
-                            <span class="stat-currency">جنيه مصري</span>
+                            <h3>الدخل بالجنيه</h3>
+                            <div class="stat-value" id="summaryIncomeEGP">0</div>
                         </div>
                     </div>
-                    
                     <div class="stat-card">
                         <div class="stat-icon">
-                            <i class="fas fa-arrow-down text-danger"></i>
+                            <i class="material-icons">attach_money</i>
                         </div>
                         <div class="stat-content">
-                            <h3>إجمالي المصروفات</h3>
-                            <p class="stat-value" id="totalExpenses">0</p>
-                            <span class="stat-currency">جنيه مصري</span>
+                            <h3>الدخل بالدولار</h3>
+                            <div class="stat-value" id="summaryIncomeUSD">0</div>
                         </div>
                     </div>
-                    
                     <div class="stat-card">
                         <div class="stat-icon">
-                            <i class="fas fa-users text-primary"></i>
+                            <i class="material-icons">arrow_downward</i>
                         </div>
                         <div class="stat-content">
-                            <h3>عدد العمال</h3>
-                            <p class="stat-value" id="totalWorkers">0</p>
-                            <span class="stat-currency">عامل</span>
+                            <h3>المصروفات بالجنيه</h3>
+                            <div class="stat-value" id="summaryExpensesEGP">0</div>
                         </div>
                     </div>
-                    
                     <div class="stat-card">
                         <div class="stat-icon">
-                            <i class="fas fa-exchange-alt text-warning"></i>
+                            <i class="material-icons">money_off</i>
                         </div>
                         <div class="stat-content">
-                            <h3>عمليات الاسترجاع</h3>
-                            <p class="stat-value" id="totalReturns">0</p>
-                            <span class="stat-currency">عملية</span>
+                            <h3>المصروفات بالدولار</h3>
+                            <div class="stat-value" id="summaryExpensesUSD">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="material-icons">show_chart</i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>صافي بالجنيه</h3>
+                            <div class="stat-value" id="summaryNetEGP">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="material-icons">trending_up</i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>صافي بالدولار</h3>
+                            <div class="stat-value" id="summaryNetUSD">0</div>
                         </div>
                     </div>
                 </div>
+            </section>
 
-                <div class="quick-actions">
-                    <h3>إجراءات سريعة</h3>
-                    <div class="action-buttons">
-                        <button class="btn btn-primary" onclick="showAddModal('income')">
-                            <i class="fas fa-plus"></i>
-                            إضافة دخل جديد
-                        </button>
-                        <button class="btn btn-danger" onclick="showAddModal('expenses')">
-                            <i class="fas fa-minus"></i>
-                            إضافة مصروف جديد
-                        </button>
-                        <button class="btn btn-success" onclick="showAddModal('workers')">
-                            <i class="fas fa-user-plus"></i>
-                            إضافة عامل جديد
-                        </button>
-                        <button class="btn btn-warning" onclick="showAddModal('returns')">
-                            <i class="fas fa-undo"></i>
-                            إضافة استرجاع
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Income Section -->
-        <section id="income" class="section">
-            <div class="container">
+            <!-- Income Section -->
+            <section id="income" class="section">
                 <div class="section-header">
-                    <h2>إدارة الدخل</h2>
-                    <button class="btn btn-primary" onclick="showAddModal('income')">
-                        <i class="fas fa-plus"></i>
-                        إضافة دخل جديد
+                    <h2>الدخل</h2>
+                </div>
+                <div class="add-button-container">
+                    <button class="btn btn-primary" onclick="openAddModal('income')">
+                        <i class="material-icons">add</i> إضافة دخل جديد
                     </button>
                 </div>
                 <div class="data-table-container">
-                    <table class="data-table" id="incomeTable">
+                    <table class="data-table">
                         <thead>
                             <tr>
                                 <th>التاريخ</th>
-                                <th>المصدر</th>
+                                <th>المصدر (منين جالي)</th>
                                 <th>المبلغ</th>
                                 <th>العملة</th>
                                 <th>طريقة الدفع</th>
                                 <th>ملاحظات</th>
                                 <th>المستخدم</th>
-                                <th>الإجراءات</th>
+                                <th>حذف</th>
                             </tr>
                         </thead>
-                        <tbody id="incomeTableBody">
-                            <!-- Data will be loaded here -->
-                        </tbody>
+                        <tbody id="incomeTableBody"></tbody>
                     </table>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Expenses Section -->
-        <section id="expenses" class="section">
-            <div class="container">
+            <!-- Expenses Section -->
+            <section id="expenses" class="section">
                 <div class="section-header">
-                    <h2>إدارة المصروفات</h2>
-                    <button class="btn btn-danger" onclick="showAddModal('expenses')">
-                        <i class="fas fa-plus"></i>
-                        إضافة مصروف جديد
+                    <h2>المصروفات</h2>
+                </div>
+                <div class="add-button-container">
+                    <button class="btn btn-danger" onclick="openAddModal('expenses')">
+                        <i class="material-icons">add</i> إضافة مصروف جديد
                     </button>
                 </div>
                 <div class="data-table-container">
-                    <table class="data-table" id="expensesTable">
+                    <table class="data-table">
                         <thead>
                             <tr>
                                 <th>التاريخ</th>
-                                <th>المصدر</th>
+                                <th>المصدر (اتصرف فين)</th>
                                 <th>المبلغ</th>
                                 <th>العملة</th>
                                 <th>طريقة الدفع</th>
                                 <th>ملاحظات</th>
                                 <th>المستخدم</th>
-                                <th>الإجراءات</th>
+                                <th>حذف</th>
                             </tr>
                         </thead>
-                        <tbody id="expensesTableBody">
-                            <!-- Data will be loaded here -->
-                        </tbody>
+                        <tbody id="expensesTableBody"></tbody>
                     </table>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Workers Section -->
-        <section id="workers" class="section">
-            <div class="container">
+            <!-- Workers Section -->
+            <section id="workers" class="section">
                 <div class="section-header">
-                    <h2>إدارة العمال</h2>
-                    <button class="btn btn-success" onclick="showAddModal('workers')">
-                        <i class="fas fa-plus"></i>
-                        إضافة عامل جديد
+                    <h2>العمال</h2>
+                </div>
+                <div class="add-button-container">
+                    <button class="btn btn-success" onclick="openAddModal('workers')">
+                        <i class="material-icons">add</i> إضافة عامل جديد
                     </button>
                 </div>
                 <div class="data-table-container">
-                    <table class="data-table" id="workersTable">
+                    <table class="data-table">
                         <thead>
                             <tr>
                                 <th>التاريخ</th>
@@ -230,171 +203,92 @@
                                 <th>طريقة الدفع</th>
                                 <th>ملاحظات</th>
                                 <th>المستخدم</th>
-                                <th>الإجراءات</th>
+                                <th>حذف</th>
                             </tr>
                         </thead>
-                        <tbody id="workersTableBody">
-                            <!-- Data will be loaded here -->
-                        </tbody>
+                        <tbody id="workersTableBody"></tbody>
                     </table>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- Returns Section -->
-        <section id="returns" class="section">
-            <div class="container">
+            <!-- Returns Section -->
+            <section id="returns" class="section">
                 <div class="section-header">
-                    <h2>إدارة الاسترجاع</h2>
-                    <button class="btn btn-warning" onclick="showAddModal('returns')">
-                        <i class="fas fa-plus"></i>
-                        إضافة استرجاع جديد
+                    <h2>الاسترجاع</h2>
+                </div>
+                <div class="add-button-container">
+                    <button class="btn btn-warning" onclick="openAddModal('returns')">
+                        <i class="material-icons">add</i> إضافة استرجاع جديد
                     </button>
                 </div>
                 <div class="data-table-container">
-                    <table class="data-table" id="returnsTable">
+                    <table class="data-table">
                         <thead>
                             <tr>
                                 <th>التاريخ</th>
-                                <th>المصدر</th>
+                                <th>المصدر (مين رجع)</th>
                                 <th>المبلغ</th>
                                 <th>العملة</th>
                                 <th>طريقة الدفع</th>
                                 <th>ملاحظات</th>
                                 <th>المستخدم</th>
-                                <th>الإجراءات</th>
+                                <th>حذف</th>
                             </tr>
                         </thead>
-                        <tbody id="returnsTableBody">
-                            <!-- Data will be loaded here -->
-                        </tbody>
+                        <tbody id="returnsTableBody"></tbody>
                     </table>
                 </div>
-            </div>
-        </section>
+            </section>
+        </main>
+    </div>
 
-        <!-- Summary Section -->
-        <section id="summary" class="section">
-            <div class="container">
-                <div class="section-header">
-                    <h2>الملخص المالي</h2>
-                </div>
-                <div class="summary-grid">
-                    <div class="summary-card">
-                        <h3>إجمالي الدخل</h3>
-                        <div class="summary-amounts">
-                            <div class="amount-item">
-                                <span class="currency">جنيه مصري:</span>
-                                <span class="amount" id="summaryIncomeEGP">0</span>
-                            </div>
-                            <div class="amount-item">
-                                <span class="currency">دولار أمريكي:</span>
-                                <span class="amount" id="summaryIncomeUSD">0</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="summary-card">
-                        <h3>إجمالي المصروفات</h3>
-                        <div class="summary-amounts">
-                            <div class="amount-item">
-                                <span class="currency">جنيه مصري:</span>
-                                <span class="amount" id="summaryExpensesEGP">0</span>
-                            </div>
-                            <div class="amount-item">
-                                <span class="currency">دولار أمريكي:</span>
-                                <span class="amount" id="summaryExpensesUSD">0</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="summary-card">
-                        <h3>صافي الربح</h3>
-                        <div class="summary-amounts">
-                            <div class="amount-item">
-                                <span class="currency">جنيه مصري:</span>
-                                <span class="amount" id="summaryNetEGP">0</span>
-                            </div>
-                            <div class="amount-item">
-                                <span class="currency">دولار أمريكي:</span>
-                                <span class="amount" id="summaryNetUSD">0</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-
-    </main>
-
-    <!-- Add/Edit Modal -->
-    <div class="modal" id="addModal">
+    <!-- Add Modal -->
+    <div id="addModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">إضافة جديد</h3>
-                <button class="modal-close" onclick="closeModal()">
-                    <i class="fas fa-times"></i>
-                </button>
+                <h3 id="modalTitle">إضافة بيانات</h3>
+                <button class="modal-close" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
                 <form id="addForm">
                     <div class="form-group">
-                        <label for="date">التاريخ</label>
-                        <input type="date" id="date" name="date" required>
+                        <label>التاريخ</label>
+                        <input id="date" type="date" required />
                     </div>
-                    
-                    <div class="form-group" id="sourceGroup">
-                        <label for="source">المصدر</label>
-                        <input type="text" id="source" name="source" required>
-                    </div>
-                    
                     <div class="form-group">
-                        <label for="amount">المبلغ</label>
-                        <input type="number" id="amount" name="amount" step="0.01" required>
+                        <label id="sourceLabel">المصدر</label>
+                        <input id="source" type="text" required />
                     </div>
-                    
                     <div class="form-group">
-                        <label for="currency">العملة</label>
-                        <select id="currency" name="currency" required>
-                            <option value="EGP">جنيه مصري</option>
-                            <option value="USD">دولار أمريكي</option>
+                        <label>المبلغ</label>
+                        <input id="amount" type="number" required />
+                    </div>
+                    <div class="form-group">
+                        <label>العملة</label>
+                        <select id="currency">
+                            <option value="EGP">جنيه</option>
+                            <option value="USD">دولار</option>
                         </select>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="paymentMethod">طريقة الدفع</label>
-                        <select id="paymentMethod" name="paymentMethod" required>
-                            <option value="نقدي">نقدي</option>
-                            <option value="تحويل بنكي">تحويل بنكي</option>
-                            <option value="شيك">شيك</option>
-                            <option value="بطاقة ائتمان">بطاقة ائتمان</option>
-                        </select>
+                        <label>طريقة الدفع</label>
+                        <input id="paymentMethod" type="text" />
                     </div>
-                    
                     <div class="form-group">
-                        <label for="notes">ملاحظات</label>
-                        <textarea id="notes" name="notes" rows="3"></textarea>
+                        <label>ملاحظات</label>
+                        <textarea id="notes"></textarea>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="user">المستخدم</label>
-                        <input type="text" id="user" name="user" required>
+                        <label>المستخدم</label>
+                        <input id="user" type="text" />
                     </div>
-                    
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">حفظ</button>
+                        <button type="submit" class="btn btn-primary">إضافة</button>
                         <button type="button" class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
                     </div>
                 </form>
             </div>
         </div>
-    </div>
-
-    <!-- Loading Spinner -->
-    <div class="loading-spinner" id="loadingSpinner">
-        <div class="spinner"></div>
-        <p>جاري التحميل...</p>
     </div>
 
     <script src="script.js"></script>
