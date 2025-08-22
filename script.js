@@ -2,7 +2,7 @@
 // ==================================================
 
 // عنوان Google Apps Script
-const GAS_URL = "https://script.google.com/macros/s/AKfycbw5k0xGJYIGBppEQsOJbh-J6QnMaCpqq8TGe8Jh2H13ErU6_U5E3j2L0L69FAS0WoSrlA/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxqLYgx980bef7NZxPZdTuku1Z4NIT2ERv91HiXAlhePRNJjqsHg8FVioKI8ydnQAa-4w/exec";
 
 // ترجمة أنواع الأقسام الإنجليزية إلى العربية التي يتوقعها الخادم
 const sheetMapping = {
@@ -21,7 +21,9 @@ document.addEventListener("DOMContentLoaded", function () {
 // إعداد التنقل بين الصفحات
 function setupNavigation() {
   document.querySelectorAll(".nav-link").forEach((link) => {
-    link.addEventListener("click", function () {
+    link.addEventListener("click", function (e) {
+      e.preventDefault();
+      
       // إزالة الفئة النشطة من جميع الروابط والأقسام
       document.querySelectorAll(".nav-link").forEach((l) => l.classList.remove("active"));
       document.querySelectorAll(".section").forEach((s) => s.classList.remove("active"));
@@ -30,6 +32,10 @@ function setupNavigation() {
       link.classList.add("active");
       const target = this.getAttribute("href")?.substring(1);
       if (target) document.getElementById(target).classList.add("active");
+      
+      // إغلاق القائمة على الجوال
+      document.getElementById("navToggle").classList.remove("active");
+      document.getElementById("navMenu").classList.remove("active");
     });
   });
 
@@ -67,12 +73,15 @@ function hideLoading() {
 function handleLogin(e) {
   e.preventDefault();
   
+  showLoading();
+  
   const phone = document.getElementById("phone").value;
   const password = document.getElementById("password").value;
   
   jsonpRequest(
     `${GAS_URL}?action=login&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}`,
     function (resp) {
+      hideLoading();
       if (resp.status === "ok") {
         document.getElementById("loginOverlay").style.display = "none";
         document.getElementById("mainContent").style.display = "block";
@@ -110,13 +119,15 @@ function jsonpRequest(url, callback) {
 
 // تحميل جميع البيانات
 function loadAllData() {
+  showLoading();
   jsonpRequest(`${GAS_URL}?action=all`, function (resp) {
-    if (resp.status === "ok") {
+    hideLoading();
+    if (resp.status === "ok" && resp.data) {
       // تعبئة الجداول
-      populateTable("income", resp.data["الدخل"]);
-      populateTable("expenses", resp.data["المصروفات"]);
-      populateTable("workers", resp.data["العمال"]);
-      populateTable("returns", resp.data["الاسترجاع"]);
+      populateTable("income", resp.data["الدخل"] || []);
+      populateTable("expenses", resp.data["المصروفات"] || []);
+      populateTable("workers", resp.data["العمال"] || []);
+      populateTable("returns", resp.data["الاسترجاع"] || []);
       
       // تعبئة ملخص لوحة القيادة
       if (resp.data["الملخص"]) {
@@ -124,6 +135,7 @@ function loadAllData() {
       }
     } else {
       alert("حدث خطأ أثناء تحميل البيانات: " + (resp.message || ""));
+      console.error("خطأ في تحميل البيانات:", resp);
     }
   });
 }
@@ -131,9 +143,16 @@ function loadAllData() {
 // تعبئة جدول البيانات
 function populateTable(type, data) {
   const tbody = document.getElementById(type + "TableBody");
-  if (!tbody || !data) return;
+  if (!tbody) return;
   
   tbody.innerHTML = "";
+  
+  if (!Array.isArray(data) || data.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="8" style="text-align: center;">لا توجد بيانات</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
   
   data.forEach((row, index) => {
     const tr = document.createElement("tr");
@@ -158,7 +177,7 @@ function populateTable(type, data) {
     else if (type === "workers") {
       tr.innerHTML = `
         <td>${row["التاريخ"] || ""}</td>
-        <td>${row["الاسم"] || ""}</td>
+        <td>${row["اسم العامل"] || ""}</td>
         <td>${row["المبلغ"] || ""}</td>
         <td>${row["العملة"] || ""}</td>
         <td>${row["طريقة الدفع"] || ""}</td>
@@ -174,39 +193,38 @@ function populateTable(type, data) {
 
 // تعبئة بيانات الملخص في لوحة القيادة
 function populateSummary(data) {
-  document.getElementById("summaryIncomeEGP").textContent = data.incomeEGP || 945082;
-  document.getElementById("summaryIncomeUSD").textContent = data.incomeUSD || 5100;
+  document.getElementById("summaryIncomeEGP").textContent = data.incomeEGP || 0;
+  document.getElementById("summaryIncomeUSD").textContent = data.incomeUSD || 0;
   document.getElementById("summaryExpensesEGP").textContent = data.expensesEGP || 0;
-  document.getElementById("summaryExpensesUSD").textContent = data.expensesUSD || 2000;
-  document.getElementById("summaryNetEGP").textContent = data.netEGP || 945082;
-  document.getElementById("summaryNetUSD").textContent = data.netUSD || 3100;
+  document.getElementById("summaryExpensesUSD").textContent = data.expensesUSD || 0;
+  document.getElementById("summaryNetEGP").textContent = data.netEGP || 0;
+  document.getElementById("summaryNetUSD").textContent = data.netUSD || 0;
 }
 
 // حذف صف من البيانات
 function deleteRow(type, index) {
-  if (confirm("هل أنت متأكد من أنك تريد حذف هذا السجل؟")) {
-    // الحصول على اسم الشيت العربي
-    const arabicSheetName = sheetMapping[type] || type;
-    
-    // إنشاء رابط الطلب مع المعلمات المطلوبة
-    const urlParams = new URLSearchParams();
-    urlParams.append('action', 'delete');
-    urlParams.append('sheet', arabicSheetName);
-    urlParams.append('row', index);
-    
-    const fullUrl = `${GAS_URL}?${urlParams.toString()}`;
-    console.log("URL طلب الحذف:", fullUrl);
-    
-    // إرسال الطلب
-    jsonpRequest(fullUrl, function (resp) {
+  if (!confirm("هل أنت متأكد من أنك تريد حذف هذا السجل؟")) {
+    return;
+  }
+  
+  const arabicSheetName = sheetMapping[type] || type;
+  const rowNumber = index + 2; // الصف في الجدول يبدأ من 2 (بعد العناوين)
+  
+  showLoading();
+  
+  jsonpRequest(
+    `${GAS_URL}?action=delete&sheet=${encodeURIComponent(arabicSheetName)}&row=${rowNumber}`, 
+    function(resp) {
+      hideLoading();
       if (resp.status === "ok") {
-        loadAllData();
+        alert("تم الحذف بنجاح");
+        loadAllData(); // إعادة تحميل البيانات
       } else {
         alert("حدث خطأ أثناء الحذف: " + (resp.message || ""));
-        console.error("خطأ في حذف البيانات:", resp);
+        console.error("خطأ في الحذف:", resp);
       }
-    });
-  }
+    }
+  );
 }
 
 // فتح نافذة الإضافة
@@ -250,6 +268,8 @@ function closeModal() {
 function handleAddData(e) {
   e.preventDefault();
   
+  showLoading();
+  
   // الحصول على نوع الشيت من السمة المخزنة
   const sheetType = document.getElementById("addForm").getAttribute("data-type") || "income";
   
@@ -261,7 +281,7 @@ function handleAddData(e) {
   if (sheetType === "income") sourceKey = "المصدر (منين جالي)";
   else if (sheetType === "expenses") sourceKey = "المصدر (اتصرف فين)";
   else if (sheetType === "returns") sourceKey = "المصدر (مين رجع)";
-  else if (sheetType === "workers") sourceKey = "الاسم";
+  else if (sheetType === "workers") sourceKey = "اسم العامل";
   
   // تجميع البيانات من النموذج
   const dataObj = {
@@ -269,9 +289,9 @@ function handleAddData(e) {
     [sourceKey]: document.getElementById("source").value,
     "المبلغ": document.getElementById("amount").value,
     "العملة": document.getElementById("currency").value,
-    "طريقة الدفع": document.getElementById("paymentMethod").value || "",
-    "ملاحظات": document.getElementById("notes").value || "",
-    "المستخدم": document.getElementById("user").value || ""
+    "طريقة الدفع": document.getElementById("paymentMethod").value,
+    "ملاحظات": document.getElementById("notes").value,
+    "المستخدم": document.getElementById("user").value
   };
   
   // استخدام صيغة مختلفة للإرسال تتوافق مع ما يتوقعه الخادم
@@ -283,15 +303,14 @@ function handleAddData(e) {
   const dataString = JSON.stringify(dataObj);
   urlParams.append('data', dataString);
   
-  // طباعة الرابط الكامل للتصحيح
-  const fullUrl = `${GAS_URL}?${urlParams.toString()}`;
-  console.log("URL طلب الإضافة:", fullUrl);
-  
   // إرسال الطلب
-  jsonpRequest(fullUrl, function (resp) {
+  jsonpRequest(`${GAS_URL}?${urlParams.toString()}`, function (resp) {
+    hideLoading();
+    
     if (resp.status === "ok") {
       closeModal();
       loadAllData();
+      alert("تمت الإضافة بنجاح");
     } else {
       alert("حدث خطأ في إضافة البيانات: " + (resp.message || ""));
       console.error("خطأ في إضافة البيانات:", resp);
@@ -299,24 +318,17 @@ function handleAddData(e) {
   });
 }
 
-// تحديث البيانات تلقائيًا كل فترة زمنية (اختياري)
-let autoRefreshInterval;
-
-function startAutoRefresh(intervalMinutes) {
-  // إيقاف أي تحديث تلقائي موجود
-  stopAutoRefresh();
-  
-  // تحديث البيانات كل عدد محدد من الدقائق
-  const intervalMs = intervalMinutes * 60 * 1000;
-  autoRefreshInterval = setInterval(loadAllData, intervalMs);
-  
-  console.log(`تم تفعيل التحديث التلقائي كل ${intervalMinutes} دقيقة`);
-}
-
-function stopAutoRefresh() {
-  if (autoRefreshInterval) {
-    clearInterval(autoRefreshInterval);
-    autoRefreshInterval = null;
-    console.log("تم إيقاف التحديث التلقائي");
-  }
+// اختبار الاتصال بالخادم
+function testConnection() {
+  showLoading();
+  jsonpRequest(`${GAS_URL}?action=ping`, function(resp) {
+    hideLoading();
+    if (resp.status === "ok") {
+      console.log("الاتصال ناجح:", resp);
+      alert("الاتصال بالخادم ناجح!");
+    } else {
+      console.error("فشل الاتصال:", resp);
+      alert("فشل الاتصال بالخادم: " + (resp.message || ""));
+    }
+  });
 }
