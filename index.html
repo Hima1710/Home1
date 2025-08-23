@@ -27,8 +27,19 @@
                 </div>
                 <button type="submit" class="btn btn-primary login-btn">تسجيل الدخول</button>
                 <div id="loginError" class="login-error"></div>
+                <div id="retryButton" class="retry-button" style="display: none;">
+                    <button type="button" class="btn btn-warning" onclick="retryLogin()">
+                        <i class="material-icons">refresh</i> إعادة المحاولة
+                    </button>
+                </div>
             </form>
         </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-spinner">
+        <div class="spinner"></div>
+        <div id="loadingText" class="loading-text"></div>
     </div>
 
     <!-- Main Content -->
@@ -65,6 +76,11 @@
                 <div class="section-header">
                     <h2>لوحة التحكم</h2>
                     <p>ملخص سريع لكل الحسابات</p>
+                    <div class="dashboard-buttons">
+                        <button class="btn btn-success" onclick="loadAllData()">
+                            <i class="material-icons">sync</i> تحديث الكل
+                        </button>
+                    </div>
                 </div>
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -289,12 +305,6 @@
                 </form>
             </div>
         </div>
-    </div>
-
-    <!-- Loading Spinner -->
-    <div id="loadingSpinner" class="loading-spinner">
-        <div class="spinner"></div>
-        <p>جاري التحميل...</p>
     </div>
 
     <script src="script.js"></script>

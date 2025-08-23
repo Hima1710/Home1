@@ -244,6 +244,7 @@ body {
     justify-content: flex-end;
     margin-top: 2rem;
 }
+/* مؤشر التحميل المحسن */
 .loading-spinner {
     display: none;
     position: fixed;
@@ -253,23 +254,40 @@ body {
     height: 100%;
     background: rgba(0,0,0,0.8);
     backdrop-filter: blur(5px);
-    z-index: 3000;
+    z-index: 9999;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     color: white;
 }
-.loading-spinner.active { display: flex; }
+
+.loading-spinner.active { 
+    display: flex; 
+}
+
 .spinner {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border: 4px solid rgba(255,255,255,0.3);
     border-top: 4px solid white;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 1rem;
 }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.loading-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-align: center;
+    color: white;
+    margin-top: 1rem;
+    max-width: 300px;
+}
+
+@keyframes spin { 
+    0% { transform: rotate(0deg); } 
+    100% { transform: rotate(360deg); } 
+}
 .login-overlay {
     display: flex;
     position: fixed;
@@ -304,12 +322,18 @@ body {
 .login-form { display: flex; flex-direction: column; gap: 1.5rem; }
 .login-btn { width: 100%; }
 .login-error {
-    color: var(--danger-color); font-weight: 600;
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 10px;
     text-align: center;
-    margin-top: 1rem;
     display: none;
 }
-.login-error.show { display: block; }
+.login-error.show {
+    display: block;
+}
 
 /* أزرار */
 .btn {
@@ -358,4 +382,136 @@ body {
     .stats-grid { grid-template-columns: 1fr; }
     .data-table th, .data-table td { padding: 0.5rem; }
     .modal-content { width: 95%; padding: 1rem; }
+}
+
+/* زر اختبار الاتصال */
+#testConnectionBtn {
+    margin-top: 10px;
+    width: 100%;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+#testConnectionBtn:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+/* تحسين رسائل الخطأ */
+.login-error {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 10px;
+    text-align: center;
+    display: none;
+}
+
+.login-error.show {
+    display: block;
+}
+
+/* تحسين مؤشر التحميل */
+.btn-loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    margin-right: 5px;
+}
+
+/* أزرار لوحة التحكم */
+.dashboard-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-buttons .btn {
+    min-width: 150px;
+}
+
+/* تحسين مؤشر التحميل */
+.spinner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 9999;
+    display: none;
+}
+
+.spinner.active {
+    display: block;
+}
+
+@keyframes spin { 
+    0% { transform: translate(-50%, -50%) rotate(0deg); } 
+    100% { transform: translate(-50%, -50%) rotate(360deg); } 
+}
+
+/* نصائح السرعة */
+.speed-tips {
+    background: rgba(37, 99, 235, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    text-align: right;
+}
+
+.speed-tips p {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.speed-tips ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.speed-tips li {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+    padding-right: 1rem;
+    position: relative;
+}
+
+.speed-tips li:before {
+    content: "•";
+    color: var(--primary-color);
+    position: absolute;
+    right: 0;
+}
+
+/* زر إعادة المحاولة */
+.retry-button {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.retry-button .btn {
+    background: var(--warning-color);
+    border-color: var(--warning-color);
+}
+
+.retry-button .btn:hover {
+    background: #d97706;
+    border-color: #d97706;
 }

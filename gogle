@@ -1,0 +1,766 @@
+/**
+ * نظام الحسابات - Google Apps Script API
+ * Features:
+ * - تسجيل دخول آمن مع HMAC token
+ * - عرض البيانات (جميع الأوراق أو ورقة محددة)
+ * - إضافة بيانات جديدة
+ * - تعديل البيانات الموجودة
+ * - حذف البيانات
+ * - دعم JSONP
+ * - حماية البيانات
+ */
+
+// ===================== الإعدادات =====================
+const CONFIG = {
+  SPREADSHEET_ID: '1GX9-Zrp8-zzUyMOyW93rYENc15sEHrM0Ztru1XoLLxM',
+  USERS_SHEET: 'المستخدمين',
+  SUMMARY_SHEET: 'الملخص',
+  DEFAULT_SHEETS: ['الدخل', 'المصروفات', 'العمال', 'الاسترجاع', 'الملخص'],
+  REQUIRED_FIELDS: {
+    'الدخل': ['التاريخ', 'المصدر (منين جالي)', 'المبلغ', 'العملة', 'طريقة الدفع', 'المستخدم'],
+    'المصروفات': ['التاريخ', 'المصدر (اتصرف فين)', 'المبلغ', 'العملة', 'طريقة الدفع', 'المستخدم'],
+    'العمال': ['التاريخ', 'اسم العامل', 'المبلغ', 'العملة', 'طريقة الدفع', 'المستخدم'],
+    'الاسترجاع': ['التاريخ', 'المصدر (مين رجع)', 'المبلغ', 'العملة', 'طريقة الدفع', 'المستخدم']
+  },
+  DEFAULT_HEADERS: {
+    'الدخل': ['ID', 'التاريخ', 'المصدر (منين جالي)', 'المبلغ', 'العملة', 'طريقة الدفع', 'المستخدم', 'ملاحظة'],
+    'المصروفات': ['ID', 'التاريخ', 'المصدر (اتصرف فين)', 'المبلغ', 'العملة', 'طريقة الدفع', 'المستخدم', 'ملاحظة'],
+    'العمال': ['ID', 'التاريخ', 'اسم العامل', 'المبلغ', 'العملة', 'طريقة الدفع', 'المستخدم', 'ملاحظة'],
+    'الاسترجاع': ['ID', 'التاريخ', 'المصدر (مين رجع)', 'المبلغ', 'العملة', 'طريقة الدفع', 'المستخدم', 'ملاحظة'],
+    'الملخص': ['الفئة', 'إجمالي المبالغ', 'العملة', 'الفترة'],
+    'المستخدمين': ['phone', 'password']
+  }
+};
+
+// ===================== النقاط الرئيسية =====================
+function doGet(e) { return handleRequest(e, 'GET'); }
+function doPost(e) { return handleRequest(e, 'POST'); }
+
+function handleRequest(e, method) {
+  try {
+    console.log('Request received:', method, e.parameter);
+    
+    const { params, callback } = parseRequest(e, method);
+    if (!params.action) {
+      return sendJSON({ status: 'error', code: 400, message: 'Missing action', data: null }, callback);
+    }
+
+    // التحقق من API Key (اختياري)
+    const scriptProps = PropertiesService.getScriptProperties();
+    const REQUIRED_API_KEY = scriptProps.getProperty('API_KEY');
+    if (REQUIRED_API_KEY && params.apiKey !== REQUIRED_API_KEY) {
+      return sendJSON({ status: 'error', code: 401, message: 'Invalid API key' }, callback);
+    }
+
+    // توجيه الطلب للدالة المناسبة
+    switch (params.action) {
+      case 'ping':
+        return sendJSON({ status: 'ok', message: 'pong', time: new Date().toISOString() }, callback);
+      
+      case 'login':
+        return handleLogin(params, callback);
+      
+      case 'all':
+        return handleAll(params, callback);
+      
+      case 'get':
+        return handleGetSheet(params, callback);
+      
+      case 'add':
+        return requireAuth(params, callback, () => handleAdd(params, callback));
+      
+      case 'update':
+        return requireAuth(params, callback, () => handleUpdate(params, callback));
+      
+      case 'delete':
+        return requireAuth(params, callback, () => handleDelete(params, callback));
+      
+      case 'setup':
+        return requireAuth(params, callback, () => handleSetup(callback));
+      
+      default:
+        return sendJSON({ status: 'error', code: 400, message: 'Invalid action: ' + params.action }, callback);
+    }
+  } catch (err) {
+    console.error('Unhandled error:', err);
+    return sendJSON({ status: 'error', code: 500, message: 'Internal server error: ' + err.message }, e?.parameter?.callback);
+  }
+}
+
+// ===================== العمليات الرئيسية =====================
+
+// تسجيل الدخول
+function handleLogin(params, callback) {
+  console.log('Login attempt for phone:', params.phone);
+  
+  const phone = str(params.phone);
+  const password = str(params.password);
+  
+  if (!phone || !password) {
+    return sendJSON({ status: 'error', code: 400, message: 'Phone and password required' }, callback);
+  }
+
+  const user = findUserByPhone(phone);
+  if (!user) {
+    console.log('User not found for phone:', phone);
+    return sendJSON({ status: 'error', code: 401, message: 'Invalid credentials' }, callback);
+  }
+
+  const ok = verifyPassword(password, user.passwordHash, user.passwordRaw);
+  if (!ok) {
+    console.log('Password verification failed for phone:', phone);
+    return sendJSON({ status: 'error', code: 401, message: 'Invalid credentials' }, callback);
+  }
+
+  // إنشاء token
+  const ttl = toInt(PropertiesService.getScriptProperties().getProperty('TOKEN_TTL')) || 86400;
+  const token = createToken({ phone: user.phone, id: user.id || '', role: user.role || 'user' }, ttl);
+  
+  console.log('Login successful for user:', user.name || user.phone);
+  
+  return sendJSON({ 
+    status: 'ok', 
+    message: 'Login successful', 
+    token, 
+    user: { 
+      phone: user.phone, 
+      id: user.id || '', 
+      role: user.role || 'user', 
+      name: user.name || '' 
+    }, 
+    expiresIn: ttl 
+  }, callback);
+}
+
+// عرض جميع البيانات
+function handleAll(params, callback) {
+  const includeSheets = parseListParam(params.sheets) || CONFIG.DEFAULT_SHEETS;
+  const data = {};
+  
+  for (var i = 0; i < includeSheets.length; i++) {
+    const name = includeSheets[i];
+    if (!name || name === CONFIG.USERS_SHEET) continue;
+    
+    try { 
+      data[name] = getSheetData(name); 
+      console.log(`Loaded ${data[name].length} rows from sheet: ${name}`);
+    } catch (err) { 
+      console.error(`Error loading sheet ${name}:`, err);
+      data[name] = { error: 'Sheet not found: ' + err.message }; 
+    }
+  }
+  
+  return sendJSON({ status: 'ok', data }, callback);
+}
+
+// عرض ورقة محددة
+function handleGetSheet(params, callback) {
+  const sheetName = str(params.sheet);
+  if (!sheetName) {
+    return sendJSON({ status: 'error', code: 400, message: 'sheet parameter required' }, callback);
+  }
+
+  const page = Math.max(1, toInt(params.page) || 1);
+  const pageSize = Math.min(5000, Math.max(1, toInt(params.pageSize) || 100));
+  const from = str(params.from), to = str(params.to), q = str(params.q);
+
+  try {
+    const allRows = getSheetData(sheetName);
+    const filtered = filterRows(allRows, { from, to, q });
+
+    const start = (page - 1) * pageSize;
+    const items = filtered.slice(start, start + pageSize);
+    
+    console.log(`Sheet ${sheetName}: ${filtered.length} total rows, showing page ${page} (${items.length} items)`);
+    
+    return sendJSON({ 
+      status: 'ok', 
+      meta: { sheet: sheetName, total: filtered.length, page, pageSize }, 
+      data: items 
+    }, callback);
+  } catch (err) {
+    console.error(`Error getting sheet ${sheetName}:`, err);
+    return sendJSON({ status: 'error', code: 500, message: 'Error loading sheet: ' + err.message }, callback);
+  }
+}
+
+// إضافة بيانات جديدة
+function handleAdd(params, callback) {
+  const sheetName = str(params.sheet);
+  const dataObj = parseDataObj(params.data);
+  
+  if (!sheetName || !dataObj) {
+    return sendJSON({ status: 'error', code: 400, message: 'sheet and data are required' }, callback);
+  }
+  
+  if (!validateData(sheetName, dataObj)) {
+    return sendJSON({ status: 'error', code: 400, message: 'Missing required fields for sheet: ' + sheetName }, callback);
+  }
+
+  try {
+    const sheet = getSheet(sheetName);
+    const headers = getHeaders(sheet);
+    const row = headers.map(h => dataObj[h] != null ? dataObj[h] : '');
+
+    // إنشاء ID تلقائي
+    const idIdx = headers.indexOf('ID');
+    if (idIdx !== -1 && (!row[idIdx] || String(row[idIdx]).trim() === '')) {
+      row[idIdx] = generateNextId(sheet, idIdx);
+    }
+
+    sheet.appendRow(row);
+    
+    console.log(`Added new row to ${sheetName}:`, dataObj);
+    
+    return sendJSON({ 
+      status: 'ok', 
+      message: 'Data added successfully', 
+      id: idIdx !== -1 ? row[idIdx] : undefined 
+    }, callback);
+  } catch (err) {
+    console.error(`Error adding to sheet ${sheetName}:`, err);
+    return sendJSON({ status: 'error', code: 500, message: 'Error adding data: ' + err.message }, callback);
+  }
+}
+
+// تعديل البيانات
+function handleUpdate(params, callback) {
+  const sheetName = str(params.sheet);
+  if (!sheetName) {
+    return sendJSON({ status: 'error', code: 400, message: 'sheet required' }, callback);
+  }
+
+  const dataObj = parseDataObj(params.data);
+  if (!dataObj) {
+    return sendJSON({ status: 'error', code: 400, message: 'data object required' }, callback);
+  }
+
+  try {
+    const sheet = getSheet(sheetName);
+    const headers = getHeaders(sheet);
+
+    const byId = dataObj.ID != null;
+    const dataRowIndex = toInt(params.row);
+
+    let targetRow;
+    if (byId && headers.indexOf('ID') !== -1) {
+      const idIdx = headers.indexOf('ID');
+      const values = sheet.getRange(2, idIdx + 1, Math.max(0, sheet.getLastRow() - 1), 1).getValues().flat();
+      const relativeIndex = values.findIndex(v => String(v) === String(dataObj.ID));
+      if (relativeIndex === -1) {
+        return sendJSON({ status: 'error', code: 404, message: 'Row with given ID not found' }, callback);
+      }
+      targetRow = relativeIndex + 2;
+    } else if (!isNaN(dataRowIndex) && dataRowIndex >= 1) {
+      targetRow = dataRowIndex + 1;
+    } else {
+      return sendJSON({ status: 'error', code: 400, message: 'Provide data.ID or row index' }, callback);
+    }
+
+    const currentValues = sheet.getRange(targetRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const updated = currentValues.slice();
+    
+    headers.forEach((h, i) => {
+      if (Object.prototype.hasOwnProperty.call(dataObj, h)) {
+        updated[i] = dataObj[h];
+      }
+    });
+
+    sheet.getRange(targetRow, 1, 1, updated.length).setValues([updated]);
+    
+    console.log(`Updated row ${targetRow} in ${sheetName}:`, dataObj);
+    
+    return sendJSON({ status: 'ok', message: 'Row updated successfully', row: (targetRow - 1) }, callback);
+  } catch (err) {
+    console.error(`Error updating sheet ${sheetName}:`, err);
+    return sendJSON({ status: 'error', code: 500, message: 'Error updating data: ' + err.message }, callback);
+  }
+}
+
+// حذف البيانات
+function handleDelete(params, callback) {
+  const sheetName = str(params.sheet);
+  const rowIndex = toInt(params.row);
+  
+  if (!sheetName || isNaN(rowIndex)) {
+    return sendJSON({ status: 'error', code: 400, message: 'sheet and row are required' }, callback);
+  }
+  
+  if (sheetName === CONFIG.SUMMARY_SHEET) {
+    return sendJSON({ status: 'error', code: 403, message: 'لا يمكن حذف بيانات من الملخص' }, callback);
+  }
+
+  try {
+    const sheet = getSheet(sheetName);
+    if (rowIndex < 1 || rowIndex > sheet.getLastRow() - 1) {
+      return sendJSON({ status: 'error', code: 400, message: 'Row index out of range' }, callback);
+    }
+
+    sheet.deleteRow(rowIndex + 1);
+    
+    console.log(`Deleted row ${rowIndex} from ${sheetName}`);
+    
+    return sendJSON({ status: 'ok', message: 'Row deleted successfully' }, callback);
+  } catch (err) {
+    console.error(`Error deleting from sheet ${sheetName}:`, err);
+    return sendJSON({ status: 'error', code: 500, message: 'Error deleting data: ' + err.message }, callback);
+  }
+}
+
+// إعداد النظام
+function handleSetup(callback) {
+  try {
+    const ss = getSpreadsheet();
+    const names = Object.keys(CONFIG.DEFAULT_HEADERS);
+    
+    names.forEach(name => {
+      let sh = ss.getSheetByName(name);
+      if (!sh) {
+        sh = ss.insertSheet(name);
+        console.log(`Created new sheet: ${name}`);
+      }
+      
+      const headers = CONFIG.DEFAULT_HEADERS[name];
+      const current = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0];
+      const same = JSON.stringify(current.slice(0, headers.length)) === JSON.stringify(headers);
+      
+      if (!same) {
+        sh.clear();
+        sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+        sh.setFrozenRows(1);
+        console.log(`Updated headers for sheet: ${name}`);
+      }
+    });
+    
+    return sendJSON({ status: 'ok', message: 'Setup complete. Sheets and headers are ensured.' }, callback);
+  } catch (err) {
+    console.error('Setup error:', err);
+    return sendJSON({ status: 'error', code: 500, message: 'Setup failed: ' + err.message }, callback);
+  }
+}
+
+// ===================== المصادقة =====================
+
+// التحقق من المصادقة
+function requireAuth(params, callback, fn) {
+  const token = str(params.token);
+  if (!token) {
+    return sendJSON({ status: 'error', code: 401, message: 'Missing token' }, callback);
+  }
+  
+  const claims = verifyToken(token);
+  if (!claims) {
+    return sendJSON({ status: 'error', code: 401, message: 'Invalid or expired token' }, callback);
+  }
+  
+  params._user = claims;
+  return fn();
+}
+
+// إنشاء token
+function createToken(claims, ttlSeconds) {
+  const secret = PropertiesService.getScriptProperties().getProperty('TOKEN_SECRET') || 'change-me';
+  const exp = Math.floor(Date.now() / 1000) + (ttlSeconds || 86400);
+  const payload = { ...claims, exp };
+  const payloadStr = JSON.stringify(payload);
+  const payloadB64 = Utilities.base64EncodeWebSafe(Utilities.newBlob(payloadStr).getBytes());
+  const sigBytes = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_256, payloadB64, secret);
+  const sigB64 = Utilities.base64EncodeWebSafe(sigBytes);
+  return payloadB64 + '.' + sigB64;
+}
+
+// التحقق من token
+function verifyToken(token) {
+  try {
+    const [payloadB64, sigB64] = String(token).split('.');
+    if (!payloadB64 || !sigB64) return null;
+    
+    const secret = PropertiesService.getScriptProperties().getProperty('TOKEN_SECRET') || 'change-me';
+    const expectedSigBytes = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_256, payloadB64, secret);
+    const expectedSigB64 = Utilities.base64EncodeWebSafe(expectedSigBytes);
+    
+    if (expectedSigB64 !== sigB64) return null;
+    
+    const payloadStr = Utilities.newBlob(Utilities.base64DecodeWebSafe(payloadB64)).getDataAsString();
+    const payload = JSON.parse(payloadStr);
+    
+    if (!payload.exp || Math.floor(Date.now() / 1000) > payload.exp) return null;
+    
+    return payload;
+  } catch (e) {
+    console.error('verifyToken error:', e);
+    return null;
+  }
+}
+
+// تشفير كلمة المرور
+function hashPassword(password) {
+  const bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password);
+  return bytes.map(b => ('0' + (b & 0xff).toString(16)).slice(-2)).join('');
+}
+
+// التحقق من كلمة المرور
+function verifyPassword(input, storedHash, storedRaw) {
+  if (storedHash) {
+    return hashPassword(String(input)) === String(storedHash);
+  }
+  if (storedRaw) {
+    return String(input).trim() === String(storedRaw).trim();
+  }
+  return false;
+}
+
+// ===================== مساعدات الجداول =====================
+
+// الحصول على الجدول الرئيسي
+function getSpreadsheet() {
+  if (CONFIG.SPREADSHEET_ID) {
+    return SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  }
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
+// الحصول على ورقة محددة
+function getSheet(name) {
+  const sh = getSpreadsheet().getSheetByName(name);
+  if (!sh) {
+    throw new Error('Sheet not found: ' + name);
+  }
+  return sh;
+}
+
+// الحصول على العناوين
+function getHeaders(sheet) {
+  const range = sheet.getRange(1, 1, 1, sheet.getLastColumn());
+  const headers = range.getValues()[0] || [];
+  return headers.map(h => String(h).trim());
+}
+
+// الحصول على بيانات الورقة
+function getSheetData(sheetName) {
+  const sheet = getSheet(sheetName);
+  const rows = sheet.getDataRange().getValues();
+  
+  if (!rows || rows.length <= 1) return [];
+  
+  const headers = rows[0].map(h => String(h).trim());
+  const dataRows = rows.slice(1);
+  const list = [];
+  
+  for (var r = 0; r < dataRows.length; r++) {
+    const row = dataRows[r];
+    const obj = {};
+    
+    for (var c = 0; c < headers.length; c++) {
+      const key = headers[c];
+      obj[key] = row[c] === '' ? null : row[c];
+    }
+    
+    if (Object.values(obj).some(v => v !== null && String(v).trim() !== '')) {
+      list.push(obj);
+    }
+  }
+  
+  return list;
+}
+
+// التحقق من صحة البيانات
+function validateData(sheetName, data) {
+  const fields = CONFIG.REQUIRED_FIELDS[sheetName];
+  if (!fields) return true;
+  
+  return fields.every(f => data[f] != null && String(data[f]).trim() !== '');
+}
+
+// إنشاء ID تالي
+function generateNextId(sheet, idColIndexZeroBased) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 1;
+  
+  const col = idColIndexZeroBased + 1;
+  const values = sheet.getRange(2, col, lastRow - 1, 1).getValues().flat();
+  let maxId = 0;
+  
+  for (var i = 0; i < values.length; i++) {
+    var v = parseInt(values[i], 10);
+    if (!isNaN(v) && v > maxId) maxId = v;
+  }
+  
+  return maxId + 1;
+}
+
+// ===================== البحث والتصفية =====================
+
+// تصفية الصفوف
+function filterRows(rows, opts) {
+  if (!rows || rows.length === 0) return [];
+  
+  let out = rows.slice();
+  const from = parseDateISO(opts.from);
+  const to = parseDateISO(opts.to);
+  const q = str(opts.q);
+  
+  if (from || to) {
+    out = out.filter(obj => {
+      const dtRaw = obj['التاريخ'] || obj['Date'] || obj['date'];
+      const dt = toDate(dtRaw);
+      if (!dt) return false;
+      if (from && dt < from) return false;
+      if (to) dt <= new Date(to.getTime());
+      return true;
+    });
+  }
+  
+  if (q) {
+    const ql = q.toLowerCase();
+    out = out.filter(obj => 
+      Object.values(obj).some(v => 
+        String(v ?? '').toLowerCase().indexOf(ql) !== -1
+      )
+    );
+  }
+  
+  return out;
+}
+
+// ===================== إدارة المستخدمين =====================
+
+// البحث عن مستخدم برقم الهاتف - متوافق مع جدول المستخدمين الحالي
+function findUserByPhone(phone) {
+  try {
+    const sheet = getSheet(CONFIG.USERS_SHEET);
+    const rows = sheet.getDataRange().getValues();
+    
+    if (!rows || rows.length < 2) return null;
+
+    const headers = rows[0].map(h => String(h).trim());
+    const dataRows = rows.slice(1);
+    
+    console.log("عناوين جدول المستخدمين:", headers);
+    
+    // البحث عن الأعمدة المطلوبة
+    const phoneCol = headers.indexOf('phone') !== -1 ? headers.indexOf('phone') : 
+                     headers.indexOf('الهاتف') !== -1 ? headers.indexOf('الهاتف') : 0;
+    
+    const passwordCol = headers.indexOf('password') !== -1 ? headers.indexOf('password') : 
+                        headers.indexOf('كلمة المرور') !== -1 ? headers.indexOf('كلمة المرور') : 1;
+    
+    console.log("عمود الهاتف:", phoneCol, "عمود كلمة المرور:", passwordCol);
+    
+    if (phoneCol === -1 || passwordCol === -1) {
+      console.error("لم يتم العثور على الأعمدة المطلوبة");
+      return null;
+    }
+
+    const normalize = s => String(s || '').replace(/\s+/g, '').trim();
+    const wanted = normalize(phone);
+
+    for (var i = 0; i < dataRows.length; i++) {
+      const row = dataRows[i];
+      const phoneCell = normalize(row[phoneCol]);
+      
+      if (phoneCell === wanted) {
+        const password = String(row[passwordCol] || '');
+        
+        console.log("تم العثور على مستخدم:", { phone: row[phoneCol], password: password });
+        
+        return {
+          phone: row[phoneCol],
+          passwordHash: null,
+          passwordRaw: password,
+          id: '1',
+          role: 'admin',
+          name: 'Admin User'
+        };
+      }
+    }
+    
+    console.log("لم يتم العثور على مستخدم برقم الهاتف:", phone);
+    return null;
+  } catch (e) {
+    console.error('findUserByPhone error:', e);
+    return null;
+  }
+}
+
+// إنشاء مستخدم تجريبي متوافق مع جدول المستخدمين الحالي
+function createTestUser() {
+  try {
+    const sheet = getSheet(CONFIG.USERS_SHEET);
+    const headers = getHeaders(sheet);
+    
+    console.log("عناوين جدول المستخدمين الحالي:", headers);
+    
+    // التحقق من وجود الأعمدة المطلوبة
+    const phoneCol = headers.indexOf('phone') !== -1 ? headers.indexOf('phone') : 
+                     headers.indexOf('الهاتف') !== -1 ? headers.indexOf('الهاتف') : 0;
+    
+    const passwordCol = headers.indexOf('password') !== -1 ? headers.indexOf('password') : 
+                        headers.indexOf('كلمة المرور') !== -1 ? headers.indexOf('كلمة المرور') : 1;
+    
+    if (phoneCol === -1 || passwordCol === -1) {
+      console.error("لم يتم العثور على الأعمدة المطلوبة. تأكد من وجود أعمدة 'phone' و 'password'");
+      return;
+    }
+    
+    // التحقق من وجود المستخدم التجريبي
+    const existingRows = sheet.getDataRange().getValues();
+    const testPhone = '123456789';
+    
+    for (let i = 1; i < existingRows.length; i++) {
+      if (String(existingRows[i][phoneCol]).trim() === testPhone) {
+        console.log("المستخدم التجريبي موجود بالفعل");
+        return;
+      }
+    }
+    
+    // إنشاء صف جديد
+    const newRow = new Array(headers.length).fill('');
+    newRow[phoneCol] = '123456789';
+    newRow[passwordCol] = '123456789';
+    
+    sheet.appendRow(newRow);
+    console.log("تم إنشاء المستخدم التجريبي بنجاح");
+    console.log("الهاتف: 123456789");
+    console.log("كلمة المرور: 123456789");
+    
+  } catch (err) {
+    console.error('خطأ في إنشاء المستخدم التجريبي:', err);
+  }
+}
+
+// ===================== معالجة الطلبات =====================
+
+// تحليل الطلب
+function parseRequest(e, method) {
+  const callback = e?.parameter?.callback;
+  const params = {};
+  
+  if (e && e.parameter) {
+    Object.keys(e.parameter).forEach(k => { 
+      params[k] = e.parameter[k]; 
+    });
+  }
+
+  if (method === 'POST' && e && e.postData && e.postData.contents) {
+    const ct = String(e.postData.type || e.postData.contentType || '').toLowerCase();
+    const body = e.postData.contents;
+    
+    try {
+      if (ct.indexOf('application/json') !== -1) {
+        Object.assign(params, JSON.parse(body));
+      } else if (ct.indexOf('application/x-www-form-urlencoded') !== -1) {
+        body.split('&').forEach(p => {
+          const [k, v] = p.split('=');
+          if (k) params[decodeURIComponent(k)] = decodeURIComponent(v || '');
+        });
+      } else {
+        // محاولة JSON كحل أخير
+        Object.assign(params, JSON.parse(body));
+      }
+    } catch (err) {
+      console.warn('Body parse failed, continuing with query params only');
+    }
+  }
+  
+  return { params, callback };
+}
+
+// إرسال JSON
+function sendJSON(obj, callback) {
+  const json = JSON.stringify(obj, null, 0);
+  
+  if (callback) {
+    return ContentService.createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  
+  return ContentService.createTextOutput(json)
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ===================== الدوال المساعدة =====================
+
+// تحليل قائمة
+function parseListParam(v) {
+  if (!v) return null;
+  if (Array.isArray(v)) return v;
+  if (typeof v === 'string') {
+    return v.trim() === '' ? null : v.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return null;
+}
+
+// تحليل كائن البيانات
+function parseDataObj(v) { 
+  if (!v) return null; 
+  if (typeof v === 'object') return v; 
+  try { 
+    return JSON.parse(v); 
+  } catch { 
+    return null; 
+  } 
+}
+
+// تحويل إلى رقم صحيح
+function toInt(v) { 
+  const n = parseInt(v, 10); 
+  return isNaN(n) ? null : n; 
+}
+
+// تحويل إلى نص
+function str(v) { 
+  return v == null ? '' : String(v); 
+}
+
+// تحليل تاريخ ISO
+function parseDateISO(s) { 
+  if (!s) return null; 
+  const d = new Date(s); 
+  return isNaN(d.getTime()) ? null : d; 
+}
+
+// تحويل إلى تاريخ
+function toDate(v) {
+  if (v instanceof Date) return v;
+  if (typeof v === 'number') return new Date(v);
+  if (typeof v === 'string') { 
+    const d = new Date(v); 
+    if (!isNaN(d.getTime())) return d; 
+  }
+  return null;
+}
+
+// ===================== دوال مساعدة للتطوير =====================
+
+// طباعة هاش كلمة المرور (للتطوير فقط)
+function printHash(pw) { 
+  console.log('SHA-256 hash for "' + pw + '":', hashPassword(String(pw || ''))); 
+}
+
+// اختبار النظام
+function testSystem() {
+  console.log('Testing system...');
+  
+  try {
+    // اختبار الاتصال
+    console.log('Ping test:', { status: 'ok', message: 'pong', time: new Date().toISOString() });
+    
+    // اختبار إنشاء token
+    const testToken = createToken({ phone: '123456789', id: '1', role: 'admin' }, 3600);
+    console.log('Token created:', testToken);
+    
+    // اختبار التحقق من token
+    const claims = verifyToken(testToken);
+    console.log('Token verified:', claims);
+    
+    // اختبار تشفير كلمة المرور
+    const hash = hashPassword('test123');
+    console.log('Password hash:', hash);
+    
+    console.log('All tests passed!');
+    
+  } catch (err) {
+    console.error('Test failed:', err);
+  }
+}
